@@ -1,1 +1,214 @@
-You will fill this file with all of your work, from the point of view of 1997!
+---
+title: "Global $CO_{2}$ Emissions in 1997"
+short: "What Keeling missed all these years"
+journal: "AER" # AER, AEJ, PP, JEL
+month: "`r format(Sys.Date(), '%m')`"
+year: "`r format(Sys.Date(), '%Y')`"
+vol: 0
+issue: 0
+keywords:
+  - Replication
+  - Modern Science
+author:
+  - name: Finnian Meagher
+    firstname: Finnian
+    surname: Meagher
+    email: fmeagher@berkeley.edu
+    affiliation: UC Berkeley, School of Information
+  - name: Kumar Narayanan
+    firstname: Kumar
+    surname: Narayanan
+    email: kumarn@ischool.berkeley.edu
+    affiliation: UC Berkeley, School of Information
+  - name: Sandeep Kataria
+    firstname: Sandeep 
+    surname: Kataria
+    email: kataria@berkeley.edu
+    affiliation: UC Berkeley, School of Information
+  - name: Satheesh Joseph
+    firstname: Satheesh 
+    surname: Joseph
+    email: satheeshrishi@berkeley.edu
+    affiliation: UC Berkeley, School of Information
+acknowledgements: | 
+  The authors would like to thank their instructors from MIDS 271.
+abstract: | 
+  The year is 1997 and global attention is turning toward the consequences of human-actions in our environmental system. The Intergovernmental Panel on Climate Change (IPCC) has been in existence and studying these trends for more than ten years. It has released its second assessment report in 1995. In this report, the IPCC notes that the balance of the evidence suggests that human-actions play a role in the changing climate. It appears that while there are skepticism around the theory of global warming being attributed to human-actions the world hasn't yet been polazrized to be in pro- and anti- global warming camps. That said, there is also little political will to change the current trend contributing to the global warming effects. In this report, we assess data from the Mona Loa Observatory (MLO) to describe and predict global $CO_{2}$ concentrations under several possible scenarios. What we find, when we run the analysis, may paint a grim picture. 
+header-includes: 
+  - '\usepackage{graphicx}'
+  - '\usepackage{booktabs}'
+output: rticles::aea_article
+---
+
+```{r note}
+## Students this file and the supporting files to create 
+## the document come from the `rticles` package. 
+## 
+## You're not required to write something using this template; 
+## and, you might think that it hampers understanding. That's 
+## totally fine. If you would like to see other tempates, 
+## you can install, the `rticles` package, and then use the
+## templates it provides. 
+## install.packages('rticles')
+## would do the trick. 
+```
+
+```{r setup, echo=FALSE}
+## default to not show code, unless we ask for it.
+knitr::opts_chunk$set(echo=FALSE)
+options(digits = 3)
+```
+
+```{r load packages, echo = FALSE, message = FALSE, include=FALSE}
+library(tidyverse)
+library(tsibble)
+library(latex2exp)
+library(ggplot2)
+library(patchwork)
+library(magrittr)
+library(lubridate)
+library(feasts)
+library(forecast)
+library(fable)
+library(sandwich)
+library(lmtest)
+library(gridExtra)
+library(scales)
+library(zoo)
+
+install.packages("astsa")
+library(astsa)
+
+theme_set(theme_minimal())
+knitr::opts_chunk$set(dpi=1000)
+```
+
+Understanding a changing climate, and what it means for the earth's inhabitants is of growing interest to the scientific and policy community. Although, at this point in 1997 it is not entirely clear what the consequences of this growing awareness will be, in this report we present likely outcomes under "business-as-usual" scenarios. In doing so, our hope, is to establish a series of possible futures, and, as evidence, technology, and policy develop over the coming decades, that we can weigh the impacts that carbon-emission reduction efforts might take. 
+
+```{r plot the keeling curve, echo = FALSE}
+tsibble::as_tsibble(co2) %>%
+  ggplot() + 
+  aes(x=index, y=value) + 
+  geom_line(color = 'steelblue') +
+  labs(
+    title = TeX(r'(Monthly Mean $CO_2$)'),
+    subtitle = 'The "Keeling Curve"',
+    x = 'Month and Year',
+    y = TeX(r'($CO_2$ parts per million)')
+  )
+```
+
+# Background 
+## Carbon Emissions 
+What are are carbon emissions, and why should anyone care about them? In this section, we briefly review what is known about the relationship between the burning of fossil fuels, atmospheric $CO_{2}$, and the scientific community's growing understanding of the linkage between atmospheric $CO_{2}$ and global average temperatures. 
+
+Blah blah blah... 
+
+# Measurement and Data 
+## Measuring Atmospheric Carbon 
+Crucial to forecasting levels of atmospheric carbon is reliable measurement of this concept.\footnote{MIDS students: Think about this, for a moment. Suppose that you were to measure atmospheric carbon directly outside a steel-foundry in Michigan. How reliable a measurement of global atmospheric carbon do you think this would be? What if that were the only measure that you had, would you still propose to write this paper? I certainly hope not.} Several reference measurements have been proposed: Measurement 1 in Washington, DC; Measurement 2 in Bern Switzerland ... . In this study, we rely on ... 
+
+## Historical Trends in Atmospheric Carbon 
+
+Atmospheric carbon is plotted in \autoref{fig:carbon}, and shows some worrying trends. Just look at how wobbly that line is. How is it possible that we are not living in a simulation, when the lines that plots monthly average $CO_{2}$ looks like this? 
+
+```{r generate the required data object, echo=FALSE}
+# generate tsibble object that's most conducive for analysis
+co2_tsb <- co2 %>% as_tsibble()
+colnames(co2_tsb)[2] <- "co2_ppm"
+head(co2_tsb)
+
+# check for missing values
+num_na <- sum(is.na(co2_tsb$co2_ppm))
+if (num_na > 0) {
+  print(paste("There are", num_na, "missing values"))
+} else {
+    print("There are no missing values in the measurement of CO2 levels") 
+}
+```
+
+```{r EDA to see the time-series and its basic characteristics, echo=FALSE}
+co2_tsb %>% gg_tsdisplay(co2_ppm, plot_type="partial")
+co2_tsb %>% gg_season(co2_ppm)
+```
+
+\begin{figure}
+  \includegraphics[width=.8\linewidth]{./figures/plot_1.pdf}
+  \caption{An uncareful plot.\label{fig:carbon}}
+  \begin{figurenotes}
+    After giving a declarative statement about what is in the plot, it is useful to provide a very concise interpretation of what you see, or how you read the plot. It should be possible for a reader to \textit{almost} read your entire report from tables, figures, and estimated models.
+  \end{figurenotes}
+\end{figure} 
+
+Even more, a careful examination of \autoref{tab:table_1} suggests some worrying trends in headings and columns. 
+
+\begin{table}
+  \caption{What is happening with headers?\label{tab:table_1}}
+  \begin{tabular}{lll}
+    \toprule 
+    & Heading 1 & Heading 2 \\
+    Row 1 & 1 & 2 \\
+    Row 2 & 3 & 4 \\
+    \bottomrule
+  \end{tabular}
+  \begin{tablenotes}
+    Table notes environment without optional leadin.
+  \end{tablenotes}
+\end{table}
+
+# Models and Forecasts 
+While these plots might be compelling, it is often challenging to learn the exact nature of a time serires process from only these overview, "time vs. outcome" style of plots. In this section, we present evaluate two classes models to assess which time series model is most appropriate to use. 
+
+## Linear Models 
+
+To begin, we fit a model of the form: 
+
+\begin{equation}
+\label{eq:one}
+\text{CO}_{2} = \phi_{0} + \phi_{1} + \epsilon_{eit}
+\end{equation} 
+
+which, a student of the class will immediately realize is a nonsense model that is senseless. However, writing out the model form that you are going to estimate makes it very clear what you're assuming about the data generating process. It also allows you to reference what models your forecasts are being generated from. We will be expecting such a declaration in your reports. 
+
+We estimate best fitting parameters on this model in the following way, 
+```{r make fake data}
+## We wouldn't show this in a report.
+d <- data.frame(
+  y=1:10 + rnorm(n=10), 
+  x=2:11
+)
+## But we would show the next chunk. 
+```
+
+```{r estimate a model, echo=TRUE}
+model_1 <- lm(y ~ x, data = d)
+```
+
+## ARIMA Models 
+
+Sure we also fit some ARIMA models. And talk about them. 
+
+## Forecasts 
+
+```{r}
+prediction_1 <- predict(
+  object = model_1, 
+  newdata = data.frame(x=11), 
+  interval = 'prediction'
+)
+```
+
+
+Because we have fitted a model, we can make predictions from that model. Our preferred model, named in \autoref{eq:one} is quite simple, and as you might notice, does not in fact match up with the model that we have fitted. However, from this model is is possible to reason about what the outcomes would be if the *input concept* were to be slightly ouside of the observed data range. In particular, if *input concept* were as high as $11$, then we would expect the *output concept* to be `r prediction_1[1,1]`, with a prediction interval that ranges from [`r prediction_1[1,2]`, `r prediction_1[1,3]`]
+
+# Conclusions 
+
+What to conclude is unclear. 
+
+\bibliographystyle{aea}
+\bibliography{references}
+
+\appendix
+\section{Appendix: Model Robustness}
+
+While the most plausible model that we estimate is reported in the main, "Modeling" section, in this appendix to the article we examine alternative models. Here, our intent is to provide a skeptic that does not accept our assessment of this model as an ARIMA of order (1,2,3) an understanding of model forecasts under alternative scenarios. 
