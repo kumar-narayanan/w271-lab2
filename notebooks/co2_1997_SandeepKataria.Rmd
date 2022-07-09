@@ -97,8 +97,10 @@ tsibble::as_tsibble(co2) %>%
     y = TeX(r'($CO_2$ parts per million)')
   )
 ```
+# Task 0a: Introduction
 
-# EDA
+
+# Task 1a: EDA
 
 ```{r generate the required data object, echo=FALSE}
 # generate tsibble object that's most conducive for analysis
@@ -170,3 +172,165 @@ acf(co2_tsb, lag.max = 48, main = "ACF plot")
 pacf(co2_tsb, lag.max = 48, main = "PACF plot")
 ```
 
+# Task 2a: Linear time trend model
+
+
+```{r Unit Root Test}
+# Check stationarity of original data using Unitroot test
+co2_tsb %>%
+  features(co2_ppm, unitroot_kpss)
+
+```
+
+Original time-series clearly reflects seasonality as well as trend.
+Unit root test p-value = 0.01 (< 0.05) is significant at 5% significance level, confirming that we can reject the null hypothesis that original data is stationary. ACF plot indicates 'ANNUAL' seasonality which is also confirmed by PACF at 12th lag. 
+
+We apply differencing at 12th lag to remove seasonality and retest updated time-series using unit root test.
+```{r Differencing at 12th lag}
+# Apply differencing at 12th lag to remove annual seasonality
+co2_annual<- co2 %>%
+  diff(lag=12) %>%
+  ggtsdisplay(lag.max=48)
+```
+```{r Differencing Histogram}
+co2_tsb %>%
+  ggplot(aes(x=difference(co2_ppm, 12))) +
+  geom_histogram(binwidth = 0.10, color="black", fill="grey") +
+  labs(x = 'Annual season differencing')
+```
+
+```{r Unit Root Test}
+# Check stationarity of 1st order (12 month seasonality) differencing data using Unitroot test
+co2_tsb %>%
+  features(difference(co2_ppm, 12), unitroot_kpss)
+```
+
+Differenced time-series DOES NOT appear stationary as sinusoidal pattern is clearly visible.
+Histogram shows that differenced data is fairly normal, indicating that differencing data is fairly centered around mean.
+Unit Root test p-value = 0.01 (< 0.05) is STILL significant at 5% significance level, confirming we reject the null hypothesis that 1st order differenced data is stationary. ACF confirms the same with slow tapering down followed by very slow tapering up. PACF also confirms residual seasonality with sinusoidal behavior with correlation values crossing the significance bounds on either sides.
+
+```{r 2nd order differencing of 1 lag}
+# Apply 2nd order differencing of 1 lag to check stationarity
+co2_annual_plus1<- co2 %>%
+  diff(lag=12) %>%
+  diff(lag=1) %>%
+  ggtsdisplay(lag.max=48)
+```
+```{r}
+co2_tsb %>%
+  ggplot(aes(x=difference(difference(co2_ppm, 12),1))) +
+  geom_histogram(binwidth = 0.10, color="black", fill="grey") +
+  labs(x = '2nd order differencing')
+```
+
+```{r}
+co2_tsb %>%
+  features(difference(difference(co2_ppm, 12), 1), unitroot_kpss)
+```
+Differenced of difference time-series looks reasonably stationary around mean of 0.
+Histogram of 2nd order differencing is normally distributed and gives confidence that data is centered around mean or in other words, stationary.
+Unit root test p-value of 0.1 (>0.05) confirms that series is now stationary. ACF plots still shows out of significance bound correlations upto 12th lag but follow up lags are well within bounds. PACF also reflects sinusoidal pattern indicating residual seasonality.
+Overall, we can proceed with model building, as modified time series seems reasonably stationary based upon p-value and we would prefer not to over fit our model.
+
+
+## Linear Model
+```{r Linear Model}
+co2_1997_linear <- co2_tsb %>%
+  model(TSLM(co2_ppm ~ trend()))
+
+report(co2_1997_linear)
+```
+
+```{r Linear Model and Original Time Series plot}
+augment(co2_1997_linear) %>%
+  ggplot(aes(x=index)) +
+  geom_line(aes(y=.fitted, colour = 'LinearFit')) +
+  geom_line(aes(y=co2_ppm, colour = 'Original')) +
+  labs(title='CO2 ppm vs. Linear Model') +
+  scale_colour_manual(values = c(LinearFit = 'red', Original = 'blue')) +
+  guides(colour = guide_legend(title = 'Legend'))
+```
+
+Linear fit does a decent job as it stays with original data bounds for the time frame, but it does not guarantee a good forecast.
+
+```{r Residuals of Linear Fit Model}
+co2_1997_linear %>% 
+  gg_tsresiduals() +
+  labs(title = "Residuals of a Linear Model fit")
+```
+
+There is a strong correlation and seasonality in residuals as reflected in ACF as well. Residuals are not centered around a mean either mean goes down and then goes up over time. Histogram reflects the same behavior.
+
+
+```{r Logarithmic Transformation}
+co2_1997_log <- co2_tsb %>%
+  model(TSLM(log(co2_ppm) ~ trend()))
+
+report(co2_1997_log)
+```
+
+```{r Logarithm Model and Original Time Series plot}
+augment(co2_1997_log) %>%
+  ggplot(aes(x=index)) +
+  geom_line(aes(y=.fitted, colour = 'LogFit')) +
+  geom_line(aes(y=co2_ppm, colour = 'Original')) +
+  labs(title='CO2 ppm vs. Logarithmic Model') +
+  scale_colour_manual(values = c(LogFit = 'red', Original = 'blue')) +
+  guides(colour = guide_legend(title = 'Legend'))
+```
+
+```{r Residuals of Linear Fit Model}
+co2_1997_log %>% 
+  gg_tsresiduals() +
+  labs(title = "Residuals of a Logarithmic Model fit")
+
+```
+### WRITE UP for LOG Transform and Residual Analysis
+
+```{r Quadratic Model}
+co2_1997_quad <- co2_tsb %>%
+  model(TSLM(co2_ppm ~ trend() + I(trend()^2)))
+
+report(co2_1997_quad)
+```
+
+```{r Logarithm Model and Original Time Series plot}
+augment(co2_1997_quad) %>%
+  ggplot(aes(x=index)) +
+  geom_line(aes(y=.fitted, colour = 'QuadFit')) +
+  geom_line(aes(y=co2_ppm, colour = 'Original')) +
+  labs(title='CO2 ppm vs. Logarithmic Model') +
+  scale_colour_manual(values = c(QuadFit = 'red', Original = 'blue')) +
+  guides(colour = guide_legend(title = 'Legend'))
+
+```
+
+```{r Residuals of Quad Fit Model}
+co2_1997_quad %>% 
+  gg_tsresiduals() +
+  labs(title = "Residuals of a Quadratic Model fit")
+```
+
+```{r Quadratic_2 Model}
+co2_1997_quad_2 <- co2_tsb %>%
+  model(TSLM(co2_ppm ~ trend() + I(trend()^2) + I(trend()^3)))
+
+report(co2_1997_quad_2)
+```
+
+```{r Logarithm Model and Original Time Series plot}
+augment(co2_1997_quad_2) %>%
+  ggplot(aes(x=index)) +
+  geom_line(aes(y=.fitted, colour = 'Quad2Fit')) +
+  geom_line(aes(y=co2_ppm, colour = 'Original')) +
+  labs(title='CO2 ppm vs. Logarithmic Model') +
+  scale_colour_manual(values = c(Quad2Fit = 'red', Original = 'blue')) +
+  guides(colour = guide_legend(title = 'Legend'))
+
+```
+
+```{r Residuals of Quad Fit Model}
+co2_1997_quad_2 %>% 
+  gg_tsresiduals() +
+  labs(title = "Residuals of a Quadratic Model fit")
+```
