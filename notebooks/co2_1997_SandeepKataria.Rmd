@@ -1,0 +1,172 @@
+---
+title: "Global $CO_{2}$ Emissions in 1997"
+short: "What Keeling missed all these years"
+journal: "AER" # AER, AEJ, PP, JEL
+month: "`r format(Sys.Date(), '%m')`"
+year: "`r format(Sys.Date(), '%Y')`"
+vol: 0
+issue: 0
+keywords:
+  - Replication
+  - Modern Science
+author:
+  - name: Finnian Meagher
+    firstname: Finnian
+    surname: Meagher
+    email: fmeagher@berkeley.edu
+    affiliation: UC Berkeley, School of Information
+  - name: Kumar Narayanan
+    firstname: Kumar
+    surname: Narayanan
+    email: kumarn@ischool.berkeley.edu
+    affiliation: UC Berkeley, School of Information
+  - name: Sandeep Kataria
+    firstname: Sandeep 
+    surname: Kataria
+    email: kataria@berkeley.edu
+    affiliation: UC Berkeley, School of Information
+  - name: Satheesh Joseph
+    firstname: Satheesh 
+    surname: Joseph
+    email: satheeshrishi@berkeley.edu
+    affiliation: UC Berkeley, School of Information
+acknowledgements: | 
+  The authors would like to thank their instructors from MIDS 271.
+abstract: | 
+  The year is 1997 and global attention is turning toward the consequences of human-actions in our environmental system. The Intergovernmental Panel on Climate Change (IPCC) has been in existence and studying these trends for more than ten years. It has released its second assessment report in 1995. In this report, the IPCC notes that the balance of the evidence suggests that human-actions play a role in the changing climate. It appears that while there are skepticism around the theory of global warming being attributed to human-actions the world hasn't yet been polazrized to be in pro- and anti- global warming camps. That said, there is also little political will to change the current trend contributing to the global warming effects. In this report, we assess data from the Mona Loa Observatory (MLO) to describe and predict global $CO_{2}$ concentrations under several possible scenarios. What we find, when we run the analysis, may paint a grim picture. 
+header-includes: 
+  - '\usepackage{graphicx}'
+  - '\usepackage{booktabs}'
+output: rticles::aea_article
+---
+
+```{r note}
+## Students this file and the supporting files to create 
+## the document come from the `rticles` package. 
+## 
+## You're not required to write something using this template; 
+## and, you might think that it hampers understanding. That's 
+## totally fine. If you would like to see other tempates, 
+## you can install, the `rticles` package, and then use the
+## templates it provides. 
+## install.packages('rticles')
+## would do the trick. 
+```
+
+```{r setup, echo=FALSE}
+## default to not show code, unless we ask for it.
+knitr::opts_chunk$set(echo=FALSE)
+options(digits = 3)
+```
+
+```{r load packages, echo = FALSE, message = FALSE, include=FALSE}
+library(tidyverse)
+library(tsibble)
+library(latex2exp)
+library(ggplot2)
+library(patchwork)
+library(magrittr)
+library(lubridate)
+library(feasts)
+library(forecast)
+library(fable)
+library(sandwich)
+library(lmtest)
+library(gridExtra)
+library(scales)
+library(zoo)
+
+install.packages("astsa")
+library(astsa)
+
+theme_set(theme_minimal())
+knitr::opts_chunk$set(dpi=1000)
+```
+
+Understanding a changing climate, and what it means for the earth's inhabitants is of growing interest to the scientific and policy community. Although, at this point in 1997 it is not entirely clear what the consequences of this growing awareness will be, in this report we present likely outcomes under "business-as-usual" scenarios. In doing so, our hope, is to establish a series of possible futures, and, as evidence, technology, and policy develop over the coming decades, that we can weigh the impacts that carbon-emission reduction efforts might take. 
+
+```{r plot the keeling curve, echo = FALSE}
+tsibble::as_tsibble(co2) %>%
+  ggplot() + 
+  aes(x=index, y=value) + 
+  geom_line(color = 'steelblue') +
+  labs(
+    title = TeX(r'(Monthly Mean $CO_2$)'),
+    subtitle = 'The "Keeling Curve"',
+    x = 'Month and Year',
+    y = TeX(r'($CO_2$ parts per million)')
+  )
+```
+
+# EDA
+
+```{r generate the required data object, echo=FALSE}
+# generate tsibble object that's most conducive for analysis
+co2_tsb <- co2 %>% as_tsibble()
+colnames(co2_tsb)[2] <- "co2_ppm"
+head(co2_tsb)
+
+# check for missing values
+num_na <- sum(is.na(co2_tsb$co2_ppm))
+if (num_na > 0) {
+  print(paste("There are", num_na, "missing values"))
+} else {
+    print("There are no missing values in the measurement of CO2 levels") 
+}
+```
+
+```{r Histogram}
+hist(co2, breaks = 30, col="gray", freq = FALSE, 
+     xlab = "CO2 ppm", main = "Histogram of the CO2 Concentration")
+lines(density(co2), col = 'red', lty = 3)
+leg.txt <- c("Estimated density plot")
+legend("topright", legend = leg.txt, lty = 2, col = "red", bty = 'n', cex = .8)
+```
+
+```{r Time Series Plot}
+# Check whether time-series is mean stationary
+
+plot.ts(co2_tsb$co2_ppm, col = 'red', type = 'l', 
+     xlab = "Year (time period: month)", ylab = "CO2 ppm", 
+     main = "Time-series plot of the CO2 concentration")
+abline(h = mean(co2), col = 'green', lty = 2)
+lines(stats::filter(co2_tsb$co2_ppm, sides=2, rep(1, 12)/12), lty = 1, lwd = 1.5, 
+      col = "blue")
+leg.txt <- c("Time-series", "Mean value", 
+             "12-Month Symmetric Moving Average")
+legend("topleft", legend = leg.txt, lty = c(1, 2, 1), lwd = c(1, 1, 1.5), 
+       col = c("red", "green", "blue"), bty = 'n', cex = .8)
+```
+
+```{r Boxplot}
+# Check whether time-series is variation stationary
+
+boxplot(co2 ~ factor(rep(1959:1997, each = 12)), 
+        xlab = 'Year', ylab = 'CO2 PPM',
+        outcex = 0.8, medcol="blue", lwd = 0.3, 
+        main = 'Annual Variation of CO2 Concentration')
+```
+
+```{r Decomposition}
+co2_tsb %>%
+  model(STL(co2_ppm ~ trend() + season(),
+            robust = TRUE)) %>%
+  components() %>%
+  autoplot()
+```
+
+
+```{r EDA to see the time-series and its basic characteristics, echo=FALSE}
+# co2_tsb %>% gg_tsdisplay(co2_ppm, plot_type="partial")
+co2_tsb %>% 
+  gg_season(co2_ppm) +
+  ylab("CO2 ppm") +
+  ggtitle("Annual Seasonality")
+co2_tsb %>%
+  gg_subseries(co2_ppm) +
+  ylab("CO2 ppm") +
+  ggtitle("Monthly Trend")
+acf(co2_tsb, lag.max = 48, main = "ACF plot")
+pacf(co2_tsb, lag.max = 48, main = "PACF plot")
+```
+
