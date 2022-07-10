@@ -125,8 +125,14 @@ sim %>%
   autoplot(co2_tsb) + 
   labs(y = "co_2", title = "$CO_2$ forecast")
 print("Accuracy of trend + season")
+
 accuracy(sim$.mean, co2_1998_plus$co2_ppm)
 
+
+co2_1998_plus_copy <- co2_1998_plus %>% select(time_index, CO2_avg)
+colnames(co2_1998_plus_copy)[2] <- "co2_ppm"
+colnames(co2_1998_plus_copy)[1] <- "index"
+sim %>% accuracy(co2_1998_plus_copy, list(winkler = winkler_score), level = 80)
 ## Trend 
 co2_1997_linear <- co2_tsb %>%
   model(TSLM(co2_ppm ~ trend()))
@@ -137,6 +143,7 @@ sim %>%
   labs(y = "co_2", title = "$CO_2$ forecast")
 print("Accuracy of trend")
 accuracy(sim$.mean, co2_1998_plus$co2_ppm)
+sim %>% accuracy(co2_1998_plus_copy, list(winkler = winkler_score), level = 80)
 
 ```
 
