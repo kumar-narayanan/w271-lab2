@@ -1,0 +1,140 @@
+You will fill this file with all your work from the point of view of the present! 
+
+```{r}
+library(tidyverse)
+library(magrittr)
+library(patchwork)
+
+library(lubridate)
+
+library(tsibble)
+library(feasts)
+library(forecast)
+
+library(sandwich)
+library(lmtest)
+
+library(nycflights13)
+library(blsR)
+
+library(readr)
+
+```
+
+
+```{r Sandeep Work}
+co2_tsb <- co2 %>% as_tsibble()
+colnames(co2_tsb)[2] <- "co2_ppm"
+head(co2_tsb)
+
+co2_1997_linear <- co2_tsb %>%
+  model(TSLM(co2_ppm ~ trend()))
+report(co2_1997_linear)
+augment(co2_1997_linear) %>%
+  ggplot(aes(x=index)) +
+  geom_line(aes(y=.fitted, colour = 'LinearFit')) +
+  geom_line(aes(y=co2_ppm, colour = 'Original')) +
+  labs(title='CO2 ppm vs. Linear Model') +
+  scale_colour_manual(values = c(LinearFit = 'red', Original = 'blue')) +
+  guides(colour = guide_legend(title = 'Legend'))
+# co2_1997_linear %>% 
+#   gg_tsresiduals() +
+#   labs(title = "Residuals of a Linear Model fit")
+```
+
+
+Loading and transforming the dataset. 
+```{r Finnian Work}
+data <- read.table("https://gml.noaa.gov/webdata/ccgg/trends/co2/co2_mm_mlo.txt", header=FALSE)
+data <- data %>% rename('Year'=V1, 'Month'=V2, 'CO2_avg'=V4, 'De-seasonalized_CO2_avg'=V5, 'num_days'=V6, 'sd_of_days'=V7, 'unc_of_month_mean'=V8) 
+co2_present <- data %>% select(Year, Month, CO2_avg)
+co2_present$time_index <- lubridate::make_datetime(year=co2_present$Year, month=co2_present$Month, tz='UTC') 
+co2_present <- co2_present %>% select(time_index, CO2_avg) %>% mutate(time_index = as.Date(time_index))
+co2_present <- as_tsibble(co2_present, index=time_index)
+co2_present
+ts.plot(co2_present$CO2_avg, ylab='CO2', xlab='Month', main='CO2 by Month (1958 to Present)')
+acf(co2_present$CO2_avg, lag.max = 100)
+pacf(co2_present$CO2_avg)
+
+##examining just the section above 1979
+
+co2_1998_plus <- data %>% select(Year, Month, CO2_avg) %>% filter(Year > 1997)
+co2_1998_plus$time_index <- lubridate::make_datetime(year=co2_1998_plus$Year, month=co2_1998_plus$Month, tz='UTC') 
+co2_1998_plus <- co2_1998_plus %>% select(time_index, CO2_avg) %>% mutate(time_index = as.Date(time_index))
+co2_1998_plus <- as_tsibble(co2_1998_plus, index=time_index)
+
+co2_1998_minus <- data %>% select(Year, Month, CO2_avg) %>% filter(Year < 1998)
+co2_1998_minus$time_index <- lubridate::make_datetime(year=co2_1998_minus$Year, month=co2_1998_minus$Month, tz='UTC') 
+co2_1998_minus <- co2_1998_minus %>% select(time_index, CO2_avg) %>% mutate(time_index = as.Date(time_index))
+co2_1998_minus <- as_tsibble(co2_1998_minus, index=time_index)
+
+ts.plot(co2_1998_minus$CO2_avg, ylab='CO2', xlab='Month', main='CO2 by Month (1958 to 1997)')
+ts.plot(co2_1998_plus$CO2_avg, ylab='CO2', xlab='Month', main='CO2 by Month (1998 to Present)')
+acf(co2_1998_minus$CO2_avg, lag.max = 100)
+pacf(co2_1998_minus$CO2_avg)
+# detrending the data
+trend <- lm(co2_present$CO2_avg ~ co2_present$time_index)
+summary(trend)
+detrend <- residuals(trend)
+ts.plot(detrend, xlab="Month", ylab="Detrended C02 Levels")
+
+## detrending - differencing
+acf(detrend)
+pacf(detrend)
+differenced <- diff(co2_present$CO2_avg)
+ts.plot(differenced)
+acf(differenced)
+pacf(differenced)
+Box.test(differenced, type="Ljung")
+```
+
+The dataset is pulled from the NOAA Global Monitoring Laboratory website for the monthly average CO2 levels in Mauna Loa. Data from March 1958 through april 1974 have been obtained by C David Keeling of the Scripps Insititution of Oceanography. Monthly mean CO2 values are constructed from daily mean values. NOAA has "confidence that the CO2 measurements made at the Mauna Loa observatory reflect truth about our global atmosphere," given that the observatory is at the summit of Mauna Loa at an altitude of 3400 meters and can measure air masses that are representative of large areas, the measurements are frequently and rigorously calibrated, and ongoing comparisons are made to ensure data accuracy. 
+The NOAA GML measures the "mole fraction" of CO2 in dry air, the number of CO2 molecules in a given number of molecules of air after the removal of water vapor. This process is done given that the dry mole fraction reflects the addition and removal of the gas given that dry air does not change when air expands upon heating or ascending to a higher altitude where the pressure is lower. 
+From plotting the time series of the data, we see a strong upward trend and likely aspects of seasonality given the oscillating pattern of the time series throughout the trend. 
+From the ACF of the CO2, we see high (and statistically significant) correlation for many lags (100 lags shown on the above plot). Significance is maintained through ~250 lags. This high level of autocorrelation is indicative of trended data. 
+Observing the PACF plot, we see no statistically significant values past the first lag. 
+Examining just the years after 1979, we see a fluctuation of autocorrelations on the ACF plot, dipping below statistical significant at ~75 lags. The PACF plot shows statistically significant values ocurring for the first two lags and then at additional lags further out. 
+From the linear model of the co2 levels on the time index, we see a highly statistically significant linear relationship between the two variables, as expected from the trends observed in the time series plot and the results of the ACF plot. 
+To examine the detrending data, we will look at the residuals of the trend model. 
+We see a parabolic shape and continued seasonality. 
+We still see highly statistically significant autocorrelation in the ACF plot, and PACF values that remain statistically significant. 
+The differenced time series appears more like a white noise model. 
+Even in the differenced data, we still see statistically significant autocorrelations, which is not indicative of a white noise model. 
+The Ljung-Box test has a very small p value, indicating that we should reject the null hypothesis that the residuals of our time series model are independent. 
+
+```{r Satheesh Work}
+#co2_tsb[, c(2)] <- sapply(co2_tsb[, c(2)], as.numeric)
+## Bootstrap
+fit <- co2_tsb %>% model(TSLM(co2_ppm ~ trend()+season()))
+sim1 <- fit %>% generate(h = 293, times = 3, bootstrap = TRUE)
+
+co2_tsb %>%
+  ggplot(aes(x = index)) +
+  geom_line(aes(y = co2_ppm)) +
+  geom_line(aes(y = .sim, colour = as.factor(.rep)), data = sim1) +
+  labs(title="$CO_2$ forecast", y="co_2" ) +
+  guides(colour = "none")
+
+## Trend + Season
+co2_1997_linear <- co2_tsb %>%
+  model(TSLM(co2_ppm ~ trend()+season()))
+sim <- co2_1997_linear %>% forecast(h=293, level = c(90, 95), ts = TRUE, 
+                                    times = 120, bootstrap = TRUE)
+sim %>%
+  autoplot(co2_tsb) + 
+  labs(y = "co_2", title = "$CO_2$ forecast")
+print("Accuracy of trend + season")
+accuracy(sim$.mean, co2_1998_plus$CO2_avg)
+
+## Trend 
+co2_1997_linear <- co2_tsb %>%
+  model(TSLM(co2_ppm ~ trend()))
+sim <- co2_1997_linear %>% forecast(h=293, level = c(90, 95), ts = TRUE, 
+                                    times = 120, bootstrap = TRUE)
+sim %>%
+  autoplot(co2_tsb) + 
+  labs(y = "co_2", title = "$CO_2$ forecast")
+print("Accuracy of trend")
+accuracy(sim$.mean, co2_1998_plus$CO2_avg)
+```
+
