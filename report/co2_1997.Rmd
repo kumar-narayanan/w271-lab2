@@ -33,25 +33,12 @@ author:
 acknowledgements: | 
   The authors would like to thank their instructors from MIDS 271.
 abstract: | 
-  The year is 1997 and global attention is turning toward the consequences of human-actions in our environmental system. The Intergovernmental Panel on Climate Change (IPCC) has been in existence and studying these trends for more than ten years. It has released its second assessment report in 1995. In this report, the IPCC notes that the balance of the evidence suggests that human-actions play a role in the changing climate. It appears that while there are skepticism around the theory of global warming being attributed to human-actions the world hasn't yet been polazrized to be in pro- and anti- global warming camps. That said, there is also little political will to change the current trend contributing to the global warming effects. In this report, we assess data from the Mona Loa Observatory (MLO) to describe and predict global $CO_{2}$ concentrations under several possible scenarios. What we find, when we run the analysis, may paint a grim picture. 
+  Year 1998 is upon us and global attention is turning toward the consequences of human-actions in our environmental system. While industrial pollution, water contamination, and others have their own impacts on health, none affects the entire globe as much as the global rise in temperature. The Intergovernmental Panel on Climate Change (IPCC) has been examining these trends for more than ten years. In the second report released in 1995 the IPCC notes that the balance of the evidence suggests that climate changes, in particular global warming, is attributable to human activities. Skepticism on the findings, that the global temperature rise due to human activities, exists but hasn't yet degenerated in a polarized pro- and anti- global warming camps. That said, there is also little political will to mitigate the global warming effects through tangible actions and/or policies. The effect of $CO_{2}$ causing "Green House" effect is no more under debate; nor the effect of Green House to raise the temprature. This behooves us to analyze the $CO_{2}$ levels in the atmosphere. Data from the Mona Loa Observatory (MLO) is analyzed in this report to describe and predict global $CO_{2}$ concentrations under several possible scenarios. What we find, when we run the analysis, may paint a grim picture. 
 header-includes: 
   - '\usepackage{graphicx}'
   - '\usepackage{booktabs}'
 output: rticles::aea_article
 ---
-
-```{r note}
-## Students this file and the supporting files to create 
-## the document come from the `rticles` package. 
-## 
-## You're not required to write something using this template; 
-## and, you might think that it hampers understanding. That's 
-## totally fine. If you would like to see other tempates, 
-## you can install, the `rticles` package, and then use the
-## templates it provides. 
-## install.packages('rticles')
-## would do the trick. 
-```
 
 ```{r setup, echo=FALSE}
 ## default to not show code, unless we ask for it.
@@ -62,6 +49,7 @@ options(digits = 3)
 ```{r load packages, echo = FALSE, message = FALSE, include=FALSE}
 library(tidyverse)
 library(tsibble)
+library(tseries)
 library(latex2exp)
 library(ggplot2)
 library(patchwork)
@@ -83,7 +71,24 @@ theme_set(theme_minimal())
 knitr::opts_chunk$set(dpi=1000)
 ```
 
-Understanding a changing climate, and what it means for the earth's inhabitants is of growing interest to the scientific and policy community. Although, at this point in 1997 it is not entirely clear what the consequences of this growing awareness will be, in this report we present likely outcomes under "business-as-usual" scenarios. In doing so, our hope, is to establish a series of possible futures, and, as evidence, technology, and policy develop over the coming decades, that we can weigh the impacts that carbon-emission reduction efforts might take. 
+For the last several hundreds of years we earthlings have been living under a "Golden Period" of moderate climactic conditions, barring few locations that have extremes. The vast majority of the earth is inhabitable. We enjoy regular seasons which allows for a steady stream of food, fresh water, flora, and fauna. Overall, we have had a balanced environment around us. Increased human activities and the desire to exploit nature at an ever increasing rate for our needs have impacted this balance and, consequently, the climate that we otherwise take for granted. Understanding changing climate, and what it means for the earth's inhabitants is of growing interest to the scientific and policy community. We do not as yet reckoned all the effects of the human actions on climate. One of the key stabilizing parameters is the temperature of the earth itself. Huge quantities of fresh water are frozen in the form of glaciers. An increase in temperature, for instance, can melt these glaciers and cause water levels to raise. The impact of this action on coastal community is a disaster, to put it mildly. There are several other disastrous outcomes that temperature increase can cause. One of the main causes for temperature increase is the green house effect of gases in our atmosphere, mainly in the form of $CO_{2}$. This report analyses what we've seen so far in the carbon footprint in our atmosphere, and what possible predictions we can make. We hope that this analysis provides an understanding of how $CO_{2}$ level has changed and what the forecast for $CO_2$ level is if the current dynamics continue. We hope that this motivates us to take actions to reduce $CO_{2}$ emissions. 
+
+# Background 
+## Carbon Emissions 
+What do we mean by carbon emission, and why do we care about this? The term carbon emission is used in the context of how carbon, in the form of Carbon Dioxide (C$CO_2$), in our atmosphere impacts our lives. A lot of carbon is sequestered in the form of plants. Plants consume $CO_2$, along with water and sunlight, to produce glucose in a process called Photosynthesis. Thus, not only carbon stays in plants but plants remove $CO_2$ from the atmosphere. When we lose plant life on earth we're denied of the $CO_2$ cleaning mechanism. Carbon is also present in fossil fuel and coal. When we burn fossil fuel, coal, and wood for our energy needs we release $CO_2$. Nature maintains a delicate balance where $CO_2$ emissions in moderation can be consumed by the plants. When we destroy forests to expand our habitable land and burn fossil fuel, coal, and wood we're creating an avalanche effect. 
+
+There is little dispute that burning fossil fuel releases $CO_2$. What we have understood is that $CO_2$ is a Green House gas. $CO_2$ acts like a glass which allows light to get through while trapping heat. A simple analogy is that when we sit inside a car, windows drawn up, on a bright cold day, we can feel the temperature inside the car rise. The light energy coming through the glass window heats up the air in the car and the heat is trapped by the glass. This phenomenon is called Green House effect, named after the techniques used to grow vegetables inside glass enclosures in colder climates. $CO_2$ plays the role of the glass around the earth. Thus, more $CO_2$ more heat is trapped. 
+
+While there are other green house gases such as Methane ($CH_4$) which are far more damaging than $CO_2$ our focus is on $CO_2$. Methane has relatively lower concentration and its emission is not as prevalent as that of $CO_2$. Hence, we focus the rest of the report to understand the trend we have seen thus far of $CO_2$ levels in the atmosphere, and what it forebodes. 
+
+# Measurement and Data 
+## Measuring Atmospheric Carbon 
+
+Crucial to studying trends and forecasting levels of atmospheric carbon is reliable measurement of this concept. The importance of measuring $CO_2$ levels at relatively isolated places is important to understand the $CO_2$ levels in our atmosphere. For instance, measuring $CO_2$ in the vicinity a refinery or some other factories will provide very skewed readings. We may also see huge variance depending on the load the factory is handling. Similarly, measuring $CO_2$ levels in a busy downtown thoroughfare is also avoidable. Clearly, we will see elevated levels, and the measurements depend on the commute hours, holidays etc. 
+
+Thus, we need a neutral ground to measure the $CO_2$ levels. The data we are analyzing comes from Mouna Loa Observatory (MLO) in Hawaii's Big Island. At a height of over $13,500$ feet on a land that is surrounded by the Pacific Ocean on all sides, with no major industries, no major automobile movement in the area, and surrounded by nature, we believe that the data from MLO provides reasonable measurements. While there are active volcanoes in Hawaii in the Big Island, the altitude of the MLO allows for a neutral ground to measure $CO_2$ levels.
+
+## Historical Trends in Atmospheric Carbon 
 
 ```{r plot the keeling curve, echo = FALSE}
 tsibble::as_tsibble(co2) %>%
@@ -98,91 +103,358 @@ tsibble::as_tsibble(co2) %>%
   )
 ```
 
-# Background 
-## Carbon Emissions 
-What are are carbon emissions, and why should anyone care about them? In this section, we briefly review what is known about the relationship between the burning of fossil fuels, atmospheric $CO_{2}$, and the scientific community's growing understanding of the linkage between atmospheric $CO_{2}$ and global average temperatures. 
+Atmospheric carbon is plotted in \autoref{fig:carbon}, and shows some worrying trends. As is evident in the plot titled $Monthly$ $Mean$ $CO_2$ we see an increasing trend. This plot is referred to as the **The Keeling Curve**, named after the scientist Dr. Charles David Keeling, shows seasonal variations but the trend is definitely upward.
 
-Blah blah blah... 
+We will further examine the MLO data to understand better what we have observed till date, and what the forecast may look like. Let us look at the first few observations of the data.
 
-# Measurement and Data 
-## Measuring Atmospheric Carbon 
-Crucial to forecasting levels of atmospheric carbon is reliable measurement of this concept.\footnote{MIDS students: Think about this, for a moment. Suppose that you were to measure atmospheric carbon directly outside a steel-foundry in Michigan. How reliable a measurement of global atmospheric carbon do you think this would be? What if that were the only measure that you had, would you still propose to write this paper? I certainly hope not.} Several reference measurements have been proposed: Measurement 1 in Washington, DC; Measurement 2 in Bern Switzerland ... . In this study, we rely on ... 
+```{r sneak peek, echo=FALSE}
+head(co2, 24)
+```
 
-## Historical Trends in Atmospheric Carbon 
-
-Atmospheric carbon is plotted in \autoref{fig:carbon}, and shows some worrying trends. Just look at how wobbly that line is. How is it possible that we are not living in a simulation, when the lines that plots monthly average $CO_{2}$ looks like this? 
-
-```{r generate the required data object, echo=FALSE}
-# generate tsibble object that's most conducive for analysis
+```{r generate the required data object, include=FALSE}
+# generate tsibble object - most conducive for analysis
 co2_tsb <- co2 %>% as_tsibble()
 colnames(co2_tsb)[2] <- "co2_ppm"
-head(co2_tsb)
-
+```
+```{r check for missing values}
 # check for missing values
 num_na <- sum(is.na(co2_tsb$co2_ppm))
 if (num_na > 0) {
   print(paste("There are", num_na, "missing values"))
-} else {
-    print("There are no missing values in the measurement of CO2 levels") 
 }
 ```
 
-```{r EDA to see the time-series and its basic characteristics, echo=FALSE}
-co2_tsb %>% gg_tsdisplay(co2_ppm, plot_type="partial")
-co2_tsb %>% gg_season(co2_ppm)
+The data, when organized as a table indexed by month, has `r dim(co2_tsb)[2]` columns, named **index** and **co2_ppm**. The column names are somewhat self explanatory - the index of this table is the month of each year, and for each month we've the mean $CO_2$ level in Parts Per Million (ppm). There are `r dim(co2_tsb)[1]` observations, starting from `r as.character(min(co2_tsb$index))` and ending at `r as.character(max(co2_tsb$index))`.
+
+Let us examine the data further. Let's look at the time series data, the correlation among observations, referred to as Serial Correlation of Autocorrelation (ACF), and also the Partial Correlation (PACF), which is the correlation between two readings separated by lag 'K' after removing the observations that are between the two observations being correlated.
+
+```{r EDA explore time-series and basic characteristics, echo=FALSE}
+co2_tsb %>% gg_tsdisplay(co2_ppm, plot_type="partial") +
+  ylab(TeX(r'($CO_2$ parts per million)')) +
+  ggtitle("Time Series, Autocorrelation (acf), Partial Autocorrelation(pacf)")
 ```
 
-\begin{figure}
-  \includegraphics[width=.8\linewidth]{./figures/plot_1.pdf}
-  \caption{An uncareful plot.\label{fig:carbon}}
-  \begin{figurenotes}
-    After giving a declarative statement about what is in the plot, it is useful to provide a very concise interpretation of what you see, or how you read the plot. It should be possible for a reader to \textit{almost} read your entire report from tables, figures, and estimated models.
-  \end{figurenotes}
-\end{figure} 
+The time series graph is same as the Keeling Curve seen above. A visual analysis of the ACF indicates possible seasonality. The ACF values are not monotonically decreasing. We see a wavy pattern, indicative of possible seasonality. We'll drill down further to examine the seasonality.
 
-Even more, a careful examination of \autoref{tab:table_1} suggests some worrying trends in headings and columns. 
+```{r EDA explore seasonality, echo=FALSE}
+co2_tsb %>% gg_season(co2_ppm) +
+  ylab(TeX(r'($CO_2$ parts per million)')) +
+  ggtitle("Annual Seasonality")
+```
 
-\begin{table}
-  \caption{What is happening with headers?\label{tab:table_1}}
-  \begin{tabular}{lll}
-    \toprule 
-    & Heading 1 & Heading 2 \\
-    Row 1 & 1 & 2 \\
-    Row 2 & 3 & 4 \\
-    \bottomrule
-  \end{tabular}
-  \begin{tablenotes}
-    Table notes environment without optional leadin.
-  \end{tablenotes}
-\end{table}
+In the plot above, titled **Annual Seasonality** we see an almost same degree of seasonality year after year. Two pieces of information are evident in the plot - there is a clear seasonality in the amount of $CO_2$ that hits a peak in the mid-May to mid-June time frame, and hits a minimum in the late-September to early October time frame, and the $CO-2$ levels have been going up without exception year over year. As [figured out by Dr. Keeling](https://scrippsco2.ucsd.edu/assets/publications/keeling_tellus_1960.pdf) the plant life in the Northern Hemisphere starts growing in late spring onward which causes $CO_2$ to be absorbed by them. When the fall season kicks in the leaves fall and the plants stop growing leading to higher concentration both because of lack of vegetation to absorb $CO_2$ and also in small part by the fallen leaves and vegetation.
+
+Additionally, let us examine the sub-series plot. This plot shows us how each month fared across years of observation,
+
+```{r EDA subseries, echo=FALSE}
+co2_tsb %>%
+  gg_subseries(co2_ppm) +
+  ylab(TeX(r'($CO_2$ parts per million)')) +
+  ggtitle("Seasonal Sub-series for each month")
+```
+
+In the plot titled **Seasonal Sub-series for each month** we see that the trend we examined earlier is clearly visible. The blue lines, that represent the mean for the month across all years of observations show a peak in the May-June time frame and a low in September-October time frame. It is also quite evident that for a given month the amount of $CO_2$ has monotonically increase from 1959 to 1997.
+
+We can also take a quick look at the histogram to see if any obvious pattern emerges.
+
+```{r EDA histogram, echo=FALSE}
+co2_tsb %>% 
+  ggplot(aes(x=co2_ppm)) +
+  xlab(TeX(r'($CO_2$ parts per million)')) +
+  geom_histogram(bins=30, color="black", fill="white") 
+```
+
+The histogram is not particularly interesting. Given the seasonality the value of around 320ppm may appear more often. 
+
+As we examine data we want to see the trend component, seasonal component, and the reminder or random component. We use two different methods - classical decomposition and STL (Seasonal and Trend decomposition using Loess).
+
+```{r EDA yearly trend, echo=FALSE}
+plot.ts(co2_tsb$co2_ppm, col = 'red', type = 'l', 
+     xlab = "Year (time period: month)", ylab = "CO2 ppm", 
+     main = TeX(r'(Time-Series plot of $CO_2$ concentration)'))
+abline(h = mean(co2), col = 'green', lty = 2)
+lines(stats::filter(co2_tsb$co2_ppm, sides=2, rep(1, 12)/12), lty = 1, 
+      lwd = 1.5, col = "blue")
+leg.txt <- c("Time-series", "Mean value", 
+             "12-Month Symmetric Moving Average")
+legend("topleft", legend = leg.txt, lty = c(1, 2, 1), lwd = c(1, 1, 1.5), 
+       col = c("red", "green", "blue"), bty = 'n', cex = .8)
+```
+
+The plot titled **Time-series plot of the** $CO_2$ **concentration** shows the time series and the trend together. The visual clearly shows the increasing trend in the $CO_2$ level as a function of time. 
+
+We can get a visual of how the $CO_2$ level varied across years.
+
+```{r EDA box plot}
+boxplot(co2 ~ factor(rep(1959:1997, each = 12)), 
+        xlab = 'Year', ylab = 'CO2 PPM',
+        outcex = 0.8, medcol="blue", lwd = 0.3, 
+        main = TeX(r'(Annual Variation of $CO_2$ concentration)'))
+```
+
+As we examine data we want to see the trend component, seasonal component, and the reminder or random component. We use two different methods - classical decomposition and STL (Seasonal and Trend decomposition using Loess).
+
+```{r EDA decompose into trend and season, echo=FALSE, warning=FALSE}
+co2_decomp <- co2_tsb %>%
+  model(
+    classical_decomposition(co2_ppm, type = "additive")
+  ) %>%
+  components() %>%
+  autoplot() +
+  labs(title = "Classical additive decomposition")
+
+co2_stl <- co2_tsb %>%
+  model(
+    STL(co2_ppm ~ trend() + season(), robust = TRUE)) %>%
+  components() %>%
+  autoplot() + 
+  labs(title = "STL decomposition")
+
+co2_decomp | co2_stl
+```
+
+Clearly, both the Classical Decomposition and the STL Decomposition call out the trend line and the seasonality. There is an upward, monotonically increasing, trend. The seasonality is also clearly visible across years. The earlier graph titled **Annual Seasonality** showed a pattern of seasonality that repeats every year. The plots above is a different way to look at the seasonality. Suffice to say that we see a clear seasonal pattern. The random/remainder component look like white noise. Let's conduct a test to see if indeed these are normally distributed.
+
+```{r check if the remainder in white noise, warning=FALSE, echo=FALSE}
+# check with qqplot
+decomp_rand <- co2_decomp$data %>% 
+  filter(.var == "random")
+stl_reminder <- co2_stl$data %>%
+  filter(.var == "remainder")
+
+par(mfrow=c(1, 2))
+qqnorm(decomp_rand$.val, main="QQ-Plot Decomposition") 
+qqline(decomp_rand$.val)
+
+qqnorm(stl_reminder$.val, main="QQ-plot STL") 
+qqline(stl_reminder$.val)
+```
+
+The QQ plots above show that in the case of Classical Decomposition we do see a the random component being normally distributed. The same isn't quite true with the STL Decomposition. While majority of the remainder values align on the straight line we do see outliers and deviations. We can do "Shapiro Test" to get a quantitative feel for the normal distribution.
+
+```{r additional checks for nornamity, warning=FALSE}
+# check if remainder (STL) & random (decomposition) are normally distributed
+shapiro.test(decomp_rand$.val)
+shapiro.test(stl_reminder$.val)
+```
+
+The Shapiro test for the case of Classical Decomposition shows normality. The P-value is well above the 0.05 for a 95% confidence level. Again, the same can't be concluded of the STL test. According to the test the remainder isn't normally distributed. The mean values for both Classical Decomposition (`r mean(decomp_rand$.val, na.rm=TRUE)`) and STL Decomposition (`r mean(stl_reminder$.val, na.rm=TRUE)`) are both close to zero. We can further test if the random/remainder component has seasonality. 
+
+```{r check for stationarity, warning=FALSE}
+# augmented Dickey-Fuller test to check for stationarity
+x <- decomp_rand$.val
+x <- x[!is.na(x)]
+adf.test(x)
+
+# phillips-peron test
+x <- stl_reminder$.val
+x <- x[!is.na(x)]
+pp.test(x)
+```
+
+The results of the Augmented Dickey-Fuller test and the Phillips-Peron test confirm that the random/remainder components are stationary - p-values in both cases are 0.01, which less that 0.05, for a 95% confidence level.
+
+We now turn our attention to the stationarity of the observations itself. We test this with KPSS (Kwiatkowski) and PP (Phillips-Peron) methods which check for unit roots for a time-series process. The presence of unit root renders the process non-stationary. 
+
+```{r check for stationarity, echo=FALSE}
+test_stat <- c()
+test_type <- c()
+p_value <- c()
+x <- co2_tsb %>% features(co2_ppm, unitroot_kpss)
+test_type <- c(test_type, "KPSS")
+test_stat <- c(test_stat, x$kpss_stat)
+p_value <- c(p_value, x$kpss_pvalue)
+
+x <- co2_tsb %>% features(co2_ppm, unitroot_pp)
+test_type <- c(test_type, "PP")
+test_stat <- c(test_stat, x$pp_stat)
+p_value <- c(p_value, x$pp_pvalue)
+
+data.frame(test_type, test_stat, p_value)
+```
+
+The test results show that we've a process that merits considerations as being stationary. The p-value for the case KPSS gives us a 99% confidence level, where as the PP test gives a 90% confidence. 
+
+We can check to see if differenced series provides additional insight and/or makes the date more amenable to a suitable model. We apply difference at 12th lag to remove seasonality and retest updated time-series using unit root test.
+
+```{r Differencing at 12th lag, echo=FALSE, warning=FALSE}
+# Apply difference at 12th lag to remove annual seasonality
+co2_annual<- co2 %>%
+  diff(lag=12) %>%
+  ggtsdisplay(lag.max=48)
+
+co2_tsb %>%
+  ggplot(aes(x=difference(co2_ppm, 12))) +
+  geom_histogram(binwidth = 0.10, color="black", fill="grey") +
+  labs(x = 'Annual season differencing')
+```
+
+While the histogram above looks approximately bell-shaped the ACF and PACF plots still show seasonality. We can do an additional check with KPSS and PP tests as above on the differenced data.
+
+
+```{r unitroot test on difference, echo=FALSE}
+test_stat <- c()
+test_type <- c()
+p_value <- c()
+x <- co2_tsb %>% features(difference(co2_ppm, 12), unitroot_kpss)
+test_type <- c(test_type, "KPSS")
+test_stat <- c(test_stat, x$kpss_stat)
+p_value <- c(p_value, x$kpss_pvalue)
+
+x <- co2_tsb %>% features(difference(co2_ppm, 12), unitroot_pp)
+test_type <- c(test_type, "PP")
+test_stat <- c(test_stat, x$pp_stat)
+p_value <- c(p_value, x$pp_pvalue)
+
+data.frame(test_type, test_stat, p_value)
+```
+
+When we difference the data we do see some improvement. The p-values reported by the checks above are consistent and provide a 99% confidence level. We stretch ourselves a bit more to see if the second-order difference provides any additiona improvements. We repeat the tests above.
+
+```{r 2nd order differencing of 1 lag, warning=FALSE, echo=FALSE}
+# Apply 2nd order difference of 1 lag to check stationarity
+co2_annual_plus1<- co2 %>%
+  diff(lag=12) %>%
+  diff(lag=1) %>%
+  ggtsdisplay(lag.max=48)
+
+co2_tsb %>%
+  ggplot(aes(x=difference(difference(co2_ppm, 12),1))) +
+  geom_histogram(binwidth = 0.10, color="black", fill="grey") +
+  labs(x = '2nd order differencing')
+```
+
+```{r lag1 2nd order difference, echo=FALSE}
+test_stat <- c()
+test_type <- c()
+p_value <- c()
+x <- co2_tsb %>% 
+  features(difference(difference(co2_ppm, 12), 1), unitroot_kpss)
+test_type <- c(test_type, "KPSS")
+test_stat <- c(test_stat, x$kpss_stat)
+p_value <- c(p_value, x$kpss_pvalue)
+
+x <- co2_tsb %>% 
+  features(difference(difference(co2_ppm, 12), 1), unitroot_pp)
+test_type <- c(test_type, "PP")
+test_stat <- c(test_stat, x$pp_stat)
+p_value <- c(p_value, x$pp_pvalue)
+
+data.frame(test_type, test_stat, p_value)
+```
+
+Difference of difference time-series looks reasonably stationary around mean of 0. Histogram of second order difference is nearly normal in  distribution and gives confidence that data is centered around mean or in other words, stationary. Unit root test results confirms that series is now stationary at 90% or 99% confidence level. ACF plots still shows out of significance bound correlations up to 12th lag but follow up lags are well within bounds. PACF also reflects sinusoidal pattern indicating residual seasonality.
+
+Overall, we can proceed with model building, as modified time series seems reasonably stationary based upon p-value and we would prefer not to over fit our model.
 
 # Models and Forecasts 
-While these plots might be compelling, it is often challenging to learn the exact nature of a time serires process from only these overview, "time vs. outcome" style of plots. In this section, we present evaluate two classes models to assess which time series model is most appropriate to use. 
+While these plots might be compelling, it is often challenging to learn the exact nature of a time series process from only these overview, "time vs. outcome" style of plots. In this section, we present and evaluate two classes of models to assess which time series model is most appropriate to use. 
 
 ## Linear Models 
 
-To begin, we fit a model of the form: 
+To begin, we can consider a naive model of the form: 
 
 \begin{equation}
 \label{eq:one}
-\text{CO}_{2} = \phi_{0} + \phi_{1} + \epsilon_{eit}
+\text{CO}_{2} = \phi_{0} + \phi_{1}t + \epsilon_{t}
 \end{equation} 
 
-which, a student of the class will immediately realize is a nonsense model that is senseless. However, writing out the model form that you are going to estimate makes it very clear what you're assuming about the data generating process. It also allows you to reference what models your forecasts are being generated from. We will be expecting such a declaration in your reports. 
+The above model is essentially a linear function of time and the mean of this model is $\phi_0 + \phi_1t$. Clearly, we know that this is not the case. This model doesn't capture the seasonality that we see in the $CO_2$ observations. Recall that $CO_2$ level peaks in mid-May to mid-June time frame, and hits a low in mid-September to mid-October time frame. We can consider the yearly average value and regress that as a function of time. The new model will look like
 
-We estimate best fitting parameters on this model in the following way, 
-```{r make fake data}
-## We wouldn't show this in a report.
-d <- data.frame(
-  y=1:10 + rnorm(n=10), 
-  x=2:11
-)
-## But we would show the next chunk. 
+\begin{equation}
+\label{eq:two}
+\text{yearlyCO}_{2} = \phi_{0} + \phi_{1}t + \epsilon_{t}
+\end{equation} 
+
+```{r create yearly }
+temp <- co2_tsb 
+temp$year_ind <- year(co2_tsb$index)
+co2_yearly <- aggregate(temp["co2_ppm"], by=temp["year_ind"], mean)
+
+min_year <- min(co2_yearly$year_ind)
+lm_yearly_co2 <- lm(co2_ppm ~ I(year_ind - min_year), data=co2_yearly)
+summary(lm_yearly_co2)
 ```
 
-```{r estimate a model, echo=TRUE}
-model_1 <- lm(y ~ x, data = d)
+The model above looks reasonable. What we see is that the base is approximately `r round(as.numeric(coef(lm_yearly_co2)[1]))` ppm and an increase of `r round(as.numeric(coef(lm_yearly_co2)[2]))` every year. The p-values are low enough for us to consider this a reasonable model. The model, however, doesn't capture the seasonality and other nuances that may be better modeled with a time series. We will use time-series aware linear models to see if we get additional insights.
+
+```{r time-series linear model}
+co2_1997_linear <- co2_tsb %>%
+  model(TSLM(co2_ppm ~ trend()))
+report(co2_1997_linear)
 ```
+
+It shouldn't come as a surprise that $TLSM()$ fitted a model with identical coefficients as that of the $lm()$ method earlier. The trend is essentially yearly. The way we invoked $lm()$, based on yearly average, gives us the same results as $TSLNM()$.
+
+Now, let's compare the fit with the original.
+
+```{r Linear Model and Original Time Series plot, echo=FALSE}
+augment(co2_1997_linear) %>%
+  ggplot(aes(x=index)) +
+  geom_line(aes(y=.fitted, colour = 'LinearFit')) +
+  geom_line(aes(y=co2_ppm, colour = 'Original')) +
+  labs(title=TeX(r'($CO_2$ parts per million - data Vs prediction)')) +
+  scale_colour_manual(values = c(LinearFit = 'red', Original = 'blue')) +
+  guides(colour = guide_legend(title = 'Legend'))
+
+co2_1997_linear %>% 
+  gg_tsresiduals() +
+  labs(title = "Residuals of a Linear Model fit")
+```
+
+As expected the linear prediction model is a good fit. The plots above corroborates the finding.
+
+We can examine if data transformation, to logarithmic values, improves the model. As we did for the linear case we'll examine the output of the log-transformed model, and the residuals.
+
+```{r Logarithmic Transformation}
+co2_1997_log <- co2_tsb %>%
+  model(TSLM(log(co2_ppm) ~ trend()))
+report(co2_1997_log)
+```
+
+Logarithmic transformation has reduced the magnitude of the coefficients. This is to be expected as log transformations tends to grow slower than linear transformation. Consequently, the intercept and the slope show smaller values.
+
+```{r Logarithm Model and Original Time Series plot, echo=FALSE}
+augment(co2_1997_log) %>%
+  ggplot(aes(x=index)) +
+  geom_line(aes(y=.fitted, colour = 'LogFit')) +
+  geom_line(aes(y=co2_ppm, colour = 'Original')) +
+  labs(title=TeX(r'($CO_2$ parts per million - logarithmic transformation)')) +
+  scale_colour_manual(values = c(LogFit = 'red', Original = 'blue')) +
+  guides(colour = guide_legend(title = 'Legend'))
+
+co2_1997_log %>% 
+  gg_tsresiduals() +
+  labs(title = "Residuals of a Logarithmic Model fit")
+```
+
+Residual plost convey information similar to what we saw earlier.
+
+As for linear model, we will extend to see the impact of quadratic terms.
+
+```{r Quadratic Model}
+co2_1997_quad <- co2_tsb %>%
+  model(TSLM(co2_ppm ~ trend() + I(trend()^2)))
+report(co2_1997_quad)
+```
+
+While the quadratic term is statistically significant the coefficient associated with the quadratic term is quite small. Thus, the contribution from the quadratic term can be ignored, without significantly impacting the model. The following plots show the fit Vs actual data and the residual characteristics
+
+```{r Logarithm Model and Original Time Series plot, echo=FALSE}
+augment(co2_1997_quad) %>%
+  ggplot(aes(x=index)) +
+  geom_line(aes(y=.fitted, colour = 'QuadFit')) +
+  geom_line(aes(y=co2_ppm, colour = 'Original')) +
+  labs(title=TeX(r'($CO_2$ parts per million - quadratic model)')) +
+  scale_colour_manual(values = c(QuadFit = 'red', Original = 'blue')) +
+  guides(colour = guide_legend(title = 'Legend'))
+
+co2_1997_quad %>% 
+  gg_tsresiduals() +
+  labs(title = "Residuals of a Quadratic Model fit")
+```
+
+At this stage including higher order polynomials may not get us anything more, and further, may be lead to an over-fitted model. The predictions from these models could deviate from earlier model due to the lack of generality in the model.
 
 ## ARIMA Models 
 
