@@ -367,4 +367,144 @@ quad_model_forecast %>%
   labs(y = 'CO2 ppm', title = "Forecast till present using Quadratic Model Fit")
 ```
 
+# Task 3a: ARIMA Model
+
+```{r}
+model_orders <- data.frame(permutations(n = 16, r = 2, v = 0:15, 
+                                  set = FALSE, repeats.allowed = TRUE))
+
+colnames(model_orders) <- c("p","q")
+model_orders <- model_orders %>% filter(p + q <= 15 & p + q > 0)
+
+aic_scores <- model_orders %>% 
+  dplyr::rowwise() %>% 
+  mutate(family = ifelse(q == 0, "AR", ifelse(p == 0, "MA", "ARMA")),
+         aic = try_default(AIC(Arima(co2_tsb$co2_ppm,
+                                     order = c(p, 0, q))), default = NA, 
+                           quiet = TRUE))
+
+aic_bic_scores <- aic_scores %>% 
+  mutate(bic = try_default(BIC(Arima(co2_tsb$co2_ppm,
+                                     order = c(p, 0, q))), default = NA, 
+                           quiet = TRUE))
+aic_bic_scores <- aic_bic_scores %>%
+  filter(!is.na(aic))
+par(mfrow = c(1, 2))
+boxplot(aic_bic_scores$aic ~ aic_bic_scores$family, xlab = "Model family",
+        ylab = "AIC", main = "AIC score per model family")
+boxplot(aic_bic_scores$bic ~ aic_bic_scores$family, xlab = "Model family",
+        ylab = "BIC", main = "BIC score per model family")
+par(mfrow = c(1, 1))
+```
+
+```{r}
+kable(aic_bic_scores %>%
+        arrange(aic) %>% 
+        group_by(family) %>% 
+        top_n(-4, aic), 
+      digits = 1, caption = "Top 4 models, per AIC score")
+kable(aic_bic_scores %>% 
+        arrange(bic) %>% 
+        group_by(family) %>% 
+        top_n(-4, bic), 
+      digits = 1, caption = "Top 4 models, per BIC score")
+```
+
+
+```{r AIC Criteria}
+model.aic<-co2_tsb %>%
+  model(ARIMA(co2_ppm ~ 1 + pdq(0:12,0:3,0:12) + PDQ(0,0,0), ic="aic", stepwise=F,
+              greedy=F))
+
+# AIC Criteria
+model.aic %>%
+  report()
+```
+
+
+```{r AICC Criteria}
+model.aicc<-co2_tsb %>%
+  model(ARIMA(co2_ppm ~ 1 + pdq(0:12,0:3,0:12) + PDQ(0,0,0), ic="aicc", stepwise=F,
+              greedy=F))
+
+# AICC Criteria
+model.aicc %>%
+  report()
+```
+
+
+```{r BIC Criteria}
+model.bic<-co2_tsb %>%
+  model(ARIMA(co2_ppm ~ 1 + pdq(0:12,0:3,0:12) + PDQ(0,0,0), ic="bic", stepwise=F,
+              greedy=F))
+
+# BIC Criteria
+model.bic %>%
+  report()
+```
+
+```{r Cross Validation to verify RMSE Criteria for various 'p'}
+# Use Cross Validation to verify and choose optimum number of coeff for AR model
+
+choose.p <- function(x, h, p) {
+  arma.model <- arima(x, order = c(p,1,0), include.mean = T)
+  forecast(arma.model, h=h)
+}
+
+co2_1997_residuals_p<-NULL
+max.p<-5
+for(i in 1:max.p) {
+  co2_1997_residuals_p[[i]]<-tsCV(co2_tsb$co2_ppm, 
+                                 choose.p, h=1, p=i)
+}
+
+co2_1997_rmse_results_p<-sapply(co2_1997_residuals_p, 
+                           function(r) sqrt(mean(r^2, na.rm=T)))
+
+data.frame("p"=as.factor(1:max.p),"rmse"=co2_1997_rmse_results_p) %>%
+  ggplot(aes(p,rmse)) +
+  geom_bar(stat="identity",alpha=0.4,fill="cornflowerblue") +
+  theme_economist_white(gray_bg=F) +
+  xlab("P") +
+  ylab("RMSE")
+```
+
+
+
+```{r Cross Validation to verify RMSE Criteria for various 'q'}
+# Use Cross Validation to verify and choose optimum number of coeff. for MA model
+
+choose.q <- function(x, h, q) {
+  arma.model <- arima(x, order = c(0,2,q), include.mean = T)
+  forecast(arma.model, h=h)
+}
+
+co2_1997_residuals_q<-NULL
+max.q<-5
+for(i in 1:max.q) {
+  co2_1997_residuals_q[[i]]<-tsCV(co2_tsb$co2_ppm, choose.q, h=1, q=i)
+}
+
+co2_1997_rmse_results_p<-sapply(co2_1997_residuals_q, 
+                           function(r) sqrt(mean(r^2, na.rm=T)))
+
+data.frame("q"=as.factor(1:max.q),"rmse"=co2_1997_rmse_results_p) %>%
+  ggplot(aes(q,rmse)) +
+  geom_bar(stat="identity",alpha=0.4,fill="cornflowerblue") +
+  theme_economist_white(gray_bg=F) +
+  xlab("Q") +
+  ylab("RMSE")
+```
+### Model Performance Review
+
+```{r}
+model.bic %>%
+  augment() %>%
+  ACF(.resid) %>%
+  autoplot()
+```
+
+
+
+
 
