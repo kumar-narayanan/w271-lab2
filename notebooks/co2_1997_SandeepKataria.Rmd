@@ -299,7 +299,7 @@ augment(co2_1997_quad) %>%
   ggplot(aes(x=index)) +
   geom_line(aes(y=.fitted, colour = 'QuadFit')) +
   geom_line(aes(y=co2_ppm, colour = 'Original')) +
-  labs(title='CO2 ppm vs. Logarithmic Model') +
+  labs(title='CO2 ppm vs. Quad Model') +
   scale_colour_manual(values = c(QuadFit = 'red', Original = 'blue')) +
   guides(colour = guide_legend(title = 'Legend'))
 
@@ -323,7 +323,7 @@ augment(co2_1997_quad_2) %>%
   ggplot(aes(x=index)) +
   geom_line(aes(y=.fitted, colour = 'Quad2Fit')) +
   geom_line(aes(y=co2_ppm, colour = 'Original')) +
-  labs(title='CO2 ppm vs. Logarithmic Model') +
+  labs(title='CO2 ppm vs. Quadratic Model') +
   scale_colour_manual(values = c(Quad2Fit = 'red', Original = 'blue')) +
   guides(colour = guide_legend(title = 'Legend'))
 
@@ -334,3 +334,37 @@ co2_1997_quad_2 %>%
   gg_tsresiduals() +
   labs(title = "Residuals of a Quadratic Model fit")
 ```
+
+```{r FINAL Linear Model with Seasonality}
+co2_1997_quad_Final <- co2_tsb %>%
+  model(TSLM(co2_ppm ~ trend() + I(trend()^2) + season()))
+
+report(co2_1997_quad_Final)
+```
+
+```{r Quadratic Model with Seasonality and Original Time Series plot}
+augment(co2_1997_quad_Final) %>%
+  ggplot(aes(x=index)) +
+  geom_line(aes(y=.fitted, colour = 'QuadModel')) +
+  geom_line(aes(y=co2_ppm, colour = 'Original')) +
+  labs(title='CO2 ppm vs. Quadratic with Seasonality Model') +
+  scale_colour_manual(values = c(QuadModel = 'red', Original = 'blue')) +
+  guides(colour = guide_legend(title = 'Legend'))
+
+```
+
+```{r Residuals of Quad Fit Model with Seasonality}
+co2_1997_quad_Final %>% 
+  gg_tsresiduals() +
+  labs(title = "Residuals of a Quadratic Model fit, with Seasonality")
+```
+
+```{r Forecast using Quad Model with Seasonality}
+quad_model_forecast <- forecast(co2_1997_quad_Final, h = 294)
+
+quad_model_forecast %>%
+  autoplot(co2_tsb) +
+  labs(y = 'CO2 ppm', title = "Forecast till present using Quadratic Model Fit")
+```
+
+
