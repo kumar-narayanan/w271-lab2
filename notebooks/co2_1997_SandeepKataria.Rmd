@@ -401,19 +401,19 @@ par(mfrow = c(1, 1))
 kable(aic_bic_scores %>%
         arrange(aic) %>% 
         group_by(family) %>% 
-        top_n(-4, aic), 
-      digits = 1, caption = "Top 4 models, per AIC score")
+        top_n(-5, aic), 
+      digits = 1, caption = "Top 5 models, per AIC score")
 kable(aic_bic_scores %>% 
         arrange(bic) %>% 
         group_by(family) %>% 
-        top_n(-4, bic), 
-      digits = 1, caption = "Top 4 models, per BIC score")
+        top_n(-5, bic), 
+      digits = 1, caption = "Top 5 models, per BIC score")
 ```
 
 
 ```{r AIC Criteria}
 model.aic<-co2_tsb %>%
-  model(ARIMA(co2_ppm ~ 1 + pdq(0:12,0:3,0:12) + PDQ(0,0,0), ic="aic", stepwise=F,
+  model(ARIMA(co2_ppm ~ 1 + pdq(0:15,0:3,0:15) + PDQ(0,0,0), ic="aic", stepwise=F,
               greedy=F))
 
 # AIC Criteria
@@ -424,7 +424,7 @@ model.aic %>%
 
 ```{r AICC Criteria}
 model.aicc<-co2_tsb %>%
-  model(ARIMA(co2_ppm ~ 1 + pdq(0:12,0:3,0:12) + PDQ(0,0,0), ic="aicc", stepwise=F,
+  model(ARIMA(co2_ppm ~ 1 + pdq(0:15,0:3,0:15) + PDQ(0,0,0), ic="aicc", stepwise=F,
               greedy=F))
 
 # AICC Criteria
@@ -435,7 +435,7 @@ model.aicc %>%
 
 ```{r BIC Criteria}
 model.bic<-co2_tsb %>%
-  model(ARIMA(co2_ppm ~ 1 + pdq(0:12,0:3,0:12) + PDQ(0,0,0), ic="bic", stepwise=F,
+  model(ARIMA(co2_ppm ~ 1 + pdq(0:15,0:3,0:15) + PDQ(0,0,0), ic="bic", stepwise=F,
               greedy=F))
 
 # BIC Criteria
@@ -452,7 +452,7 @@ choose.p <- function(x, h, p) {
 }
 
 co2_1997_residuals_p<-NULL
-max.p<-5
+max.p<-15
 for(i in 1:max.p) {
   co2_1997_residuals_p[[i]]<-tsCV(co2_tsb$co2_ppm, 
                                  choose.p, h=1, p=i)
@@ -480,7 +480,7 @@ choose.q <- function(x, h, q) {
 }
 
 co2_1997_residuals_q<-NULL
-max.q<-5
+max.q<-15
 for(i in 1:max.q) {
   co2_1997_residuals_q[[i]]<-tsCV(co2_tsb$co2_ppm, choose.q, h=1, q=i)
 }
@@ -490,7 +490,7 @@ co2_1997_rmse_results_p<-sapply(co2_1997_residuals_q,
 
 data.frame("q"=as.factor(1:max.q),"rmse"=co2_1997_rmse_results_p) %>%
   ggplot(aes(q,rmse)) +
-  geom_bar(stat="identity",alpha=0.4,fill="cornflowerblue") +
+  geom_bar(stat="identity",alpha=0.4,fill="grey") +
   theme_economist_white(gray_bg=F) +
   xlab("Q") +
   ylab("RMSE")
