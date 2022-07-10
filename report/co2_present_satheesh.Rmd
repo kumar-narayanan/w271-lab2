@@ -45,33 +45,29 @@ augment(co2_1997_linear) %>%
 
 Loading and transforming the dataset. 
 ```{r Finnian Work}
-data <- read.table("https://gml.noaa.gov/webdata/ccgg/trends/co2/co2_mm_mlo.txt", header=FALSE)
-data <- data %>% rename('Year'=V1, 'Month'=V2, 'CO2_avg'=V4, 'De-seasonalized_CO2_avg'=V5, 'num_days'=V6, 'sd_of_days'=V7, 'unc_of_month_mean'=V8) 
-co2_present <- data %>% select(Year, Month, CO2_avg)
-co2_present$time_index <- lubridate::make_datetime(year=co2_present$Year, month=co2_present$Month, tz='UTC') 
-co2_present <- co2_present %>% select(time_index, CO2_avg) %>% mutate(time_index = as.Date(time_index))
-co2_present <- as_tsibble(co2_present, index=time_index)
-co2_present
+dataw1 <- read.table("https://gml.noaa.gov/webdata/ccgg/trends/co2/co2_weekly_mlo.txt", header=FALSE)
+dataw1 <- dataw1 %>% select(V1, V2, V3, V5) %>% rename("year"=V1, "month"=V2, "day"=V3, "co2"=V5) %>% filter(co2>0)
+dataw1$year_month <- lubridate::make_datetime(year=dataw1$year, month=dataw1$month, tz='UTC') 
+dataw <- dataw1 %>% select(year_month, co2) %>% mutate(year_month = as.Date(year_month))
+dataw <- aggregate(dataw$co2, by=list(year_month=dataw$year_month), FUN=mean) %>% rename("time_index"=year_month, "CO2_avg"=x)
+co2_present <- dataw %>% as_tsibble(index=time_index)
+
 ts.plot(co2_present$CO2_avg, ylab='CO2', xlab='Month', main='CO2 by Month (1958 to Present)')
 acf(co2_present$CO2_avg, lag.max = 100)
 pacf(co2_present$CO2_avg)
 
 ##examining just the section above 1979
 
-co2_1998_plus <- data %>% select(Year, Month, CO2_avg) %>% filter(Year > 1997)
-co2_1998_plus$time_index <- lubridate::make_datetime(year=co2_1998_plus$Year, month=co2_1998_plus$Month, tz='UTC') 
-co2_1998_plus <- co2_1998_plus %>% select(time_index, CO2_avg) %>% mutate(time_index = as.Date(time_index))
+co2_1998_plus <- dataw1 %>% select(year, month, co2) %>% filter(year > 1997)
+co2_1998_plus$time_index <- lubridate::make_datetime(year=co2_1998_plus$year, month=co2_1998_plus$month, tz='UTC') 
+co2_1998_plus <- co2_1998_plus %>% select(time_index, co2) %>% mutate(time_index = as.Date(time_index))
+co2_1998_plus <- aggregate(co2_1998_plus$co2, by=list(time_index=co2_1998_plus$time_index), FUN=mean) %>% rename("CO2_avg"=x)
 co2_1998_plus <- as_tsibble(co2_1998_plus, index=time_index)
 
-co2_1998_minus <- data %>% select(Year, Month, CO2_avg) %>% filter(Year < 1998)
-co2_1998_minus$time_index <- lubridate::make_datetime(year=co2_1998_minus$Year, month=co2_1998_minus$Month, tz='UTC') 
-co2_1998_minus <- co2_1998_minus %>% select(time_index, CO2_avg) %>% mutate(time_index = as.Date(time_index))
-co2_1998_minus <- as_tsibble(co2_1998_minus, index=time_index)
-
-ts.plot(co2_1998_minus$CO2_avg, ylab='CO2', xlab='Month', main='CO2 by Month (1958 to 1997)')
 ts.plot(co2_1998_plus$CO2_avg, ylab='CO2', xlab='Month', main='CO2 by Month (1998 to Present)')
-acf(co2_1998_minus$CO2_avg, lag.max = 100)
-pacf(co2_1998_minus$CO2_avg)
+acf(co2_1998_plus$CO2_avg, lag.max = 100)
+pacf(co2_1998_plus$CO2_avg)
+
 # detrending the data
 trend <- lm(co2_present$CO2_avg ~ co2_present$time_index)
 summary(trend)
@@ -86,6 +82,15 @@ ts.plot(differenced)
 acf(differenced)
 pacf(differenced)
 Box.test(differenced, type="Ljung")
+
+
+##differencing and seasonal differencing
+
+co2_present_annual_plus1<- co2_present$CO2_avg %>%
+  diff(lag=12) %>%
+  diff(lag=1)
+
+Box.test(co2_present_annual_plus1, type="Ljung")
 ```
 
 The dataset is pulled from the NOAA Global Monitoring Laboratory website for the monthly average CO2 levels in Mauna Loa. Data from March 1958 through april 1974 have been obtained by C David Keeling of the Scripps Insititution of Oceanography. Monthly mean CO2 values are constructed from daily mean values. NOAA has "confidence that the CO2 measurements made at the Mauna Loa observatory reflect truth about our global atmosphere," given that the observatory is at the summit of Mauna Loa at an altitude of 3400 meters and can measure air masses that are representative of large areas, the measurements are frequently and rigorously calibrated, and ongoing comparisons are made to ensure data accuracy. 
