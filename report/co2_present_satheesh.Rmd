@@ -108,6 +108,7 @@ The Ljung-Box test has a very small p value, indicating that we should reject th
 fit <- co2_tsb %>% model(TSLM(co2_ppm ~ trend()+season()))
 sim1 <- fit %>% generate(h = 293, times = 3, bootstrap = TRUE)
 
+
 co2_tsb %>%
   ggplot(aes(x = index)) +
   geom_line(aes(y = co2_ppm)) +
@@ -124,7 +125,7 @@ sim %>%
   autoplot(co2_tsb) + 
   labs(y = "co_2", title = "$CO_2$ forecast")
 print("Accuracy of trend + season")
-accuracy(sim$.mean, co2_1998_plus$CO2_avg)
+accuracy(sim$.mean, co2_1998_plus$co2_ppm)
 
 ## Trend 
 co2_1997_linear <- co2_tsb %>%
@@ -135,6 +136,7 @@ sim %>%
   autoplot(co2_tsb) + 
   labs(y = "co_2", title = "$CO_2$ forecast")
 print("Accuracy of trend")
-accuracy(sim$.mean, co2_1998_plus$CO2_avg)
+accuracy(sim$.mean, co2_1998_plus$co2_ppm)
+
 ```
 
