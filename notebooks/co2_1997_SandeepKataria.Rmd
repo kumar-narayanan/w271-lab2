@@ -60,6 +60,68 @@ options(digits = 3)
 ```
 
 ```{r load packages, echo = FALSE, message = FALSE, include=FALSE}
+if(!"lubridate"%in%rownames(installed.packages())) {install.packages("lubridate")}
+library(lubridate)
+if(!"zoo"%in%rownames(installed.packages())) {install.packages("zoo")}
+library(zoo)
+if(!"fable"%in%rownames(installed.packages())) {install.packages("fable")}
+library(fable)
+if(!"feasts"%in%rownames(installed.packages())) {install.packages("feasts")}
+library(feasts)
+if(!"forecast"%in%rownames(installed.packages())) {install.packages("forecast")}
+library(forecast)
+if(!"tseries"%in%rownames(installed.packages())) {install.packages("tseries")}
+library(tseries)
+if(!"tsibble"%in%rownames(installed.packages())) {install.packages("tsibble")}
+library(tsibble)
+if(!"plyr"%in%rownames(installed.packages())) {install.packages("plyr")}
+library(plyr)
+if(!"dplyr"%in%rownames(installed.packages())) {install.packages("dplyr")}
+library(dplyr)
+if(!"ggplot2"%in%rownames(installed.packages())) {install.packages("ggplot2")}
+library(ggplot2)
+if(!"ggthemes"%in%rownames(installed.packages())) {install.packages("ggthemes")}
+library(ggthemes)
+if(!"scales"%in%rownames(installed.packages())) {install.packages("scales")}
+library(scales)
+if(!"gridExtra"%in%rownames(installed.packages())) {install.packages("gridExtra")}
+library(gridExtra)
+if(!"RSocrata"%in%rownames(installed.packages())) {install.packages("RSocrata")}
+library(RSocrata)
+if(!"tidyverse"%in%rownames(installed.packages())) {install.packages("tidyverse")}
+library(tidyverse)
+if(!"magrittr"%in%rownames(installed.packages())) {install.packages("magrittr")}
+library(magrittr)
+if(!"patchwork"%in%rownames(installed.packages())) {install.packages("patchwork")}
+library(patchwork)
+if(!"knitr"%in%rownames(installed.packages())) {install.packages("knitr")}
+library(knitr)
+if(!"sandwich"%in%rownames(installed.packages())) {install.packages("sandwich")}
+library(sandwich)
+if(!"lmtest"%in%rownames(installed.packages())) {install.packages("lmtest")}
+library(lmtest)
+if(!"blsR"%in%rownames(installed.packages())) {install.packages("blsR")}
+library(blsR)
+if(!"gtools"%in%rownames(installed.packages())) {install.packages("gtools")}
+library(gtools)
+if(!"ggfortify"%in%rownames(installed.packages())) {install.packages("ggfortify")}
+library(ggfortify)
+if(!"pastecs"%in%rownames(installed.packages())) {install.packages("pastecs")}
+library(pastecs)
+if(!"car"%in%rownames(installed.packages())) {install.packages("car")}
+library(car)
+if(!"tidyr"%in%rownames(installed.packages())) {install.packages("tidyr")}
+library(tidyr)
+if(!"stargazer"%in%rownames(installed.packages())) {install.packages("stargazer")}
+library(stargazer)
+if(!"pander"%in%rownames(installed.packages())) {install.packages("pander")}
+library(pander)
+if(!"xts"%in%rownames(installed.packages())) {install.packages("xts")}
+library(xts)
+if(!"reshape2"%in%rownames(installed.packages())) {install.packages("reshape2")}
+library(reshape2)
+if(!"astsa"%in%rownames(installed.packages())) {install.packages("astsa")}
+library(astsa)
 library(tidyverse)
 library(tsibble)
 library(latex2exp)
@@ -74,10 +136,7 @@ library(sandwich)
 library(lmtest)
 library(gridExtra)
 library(scales)
-library(zoo)
 
-install.packages("astsa")
-library(astsa)
 
 theme_set(theme_minimal())
 knitr::opts_chunk$set(dpi=1000)
@@ -369,24 +428,34 @@ quad_model_forecast %>%
 
 # Task 3a: ARIMA Model
 
-```{r}
+## Round 1: Without Differencing
+
+```{r Compare AR, MA and ARMA without differencing}
 model_orders <- data.frame(permutations(n = 16, r = 2, v = 0:15, 
                                   set = FALSE, repeats.allowed = TRUE))
 
 colnames(model_orders) <- c("p","q")
 model_orders <- model_orders %>% filter(p + q <= 15 & p + q > 0)
 
-aic_scores <- model_orders %>% 
+aic_bic_scores <- model_orders %>% 
   dplyr::rowwise() %>% 
-  mutate(family = ifelse(q == 0, "AR", ifelse(p == 0, "MA", "ARMA")),
-         aic = try_default(AIC(Arima(co2_tsb$co2_ppm,
-                                     order = c(p, 0, q))), default = NA, 
-                           quiet = TRUE))
+  mutate(family = ifelse(q == 0, "AR", ifelse(p == 0, "MA", "ARMA")))
 
-aic_bic_scores <- aic_scores %>% 
-  mutate(bic = try_default(BIC(Arima(co2_tsb$co2_ppm,
-                                     order = c(p, 0, q))), default = NA, 
-                           quiet = TRUE))
+aic <- c()
+bic <- c()
+for (i in 1:nrow(aic_bic_scores)) {
+  p <- aic_bic_scores$p[i]
+  q <- aic_bic_scores$q[i]
+  aic <- c(aic, try_default(AIC(Arima(co2_tsb$co2_ppm,
+                                 order = c(p, 0, q))), default = NA, 
+                         quiet = TRUE))
+  bic <- c(bic, try_default(BIC(Arima(co2_tsb$co2_ppm,
+                                  order = c(p, 0, q))), default = NA, 
+                         quiet = TRUE))
+  
+}
+aic_bic_scores$aic <- aic
+aic_bic_scores$bic <- bic
 aic_bic_scores <- aic_bic_scores %>%
   filter(!is.na(aic))
 par(mfrow = c(1, 2))
@@ -394,7 +463,6 @@ boxplot(aic_bic_scores$aic ~ aic_bic_scores$family, xlab = "Model family",
         ylab = "AIC", main = "AIC score per model family")
 boxplot(aic_bic_scores$bic ~ aic_bic_scores$family, xlab = "Model family",
         ylab = "BIC", main = "BIC score per model family")
-par(mfrow = c(1, 1))
 ```
 
 ```{r}
@@ -402,12 +470,12 @@ kable(aic_bic_scores %>%
         arrange(aic) %>% 
         group_by(family) %>% 
         top_n(-5, aic), 
-      digits = 1, caption = "Top 5 models, per AIC score")
+      digits = 1, caption = "Top models, per AIC score")
 kable(aic_bic_scores %>% 
         arrange(bic) %>% 
         group_by(family) %>% 
         top_n(-5, bic), 
-      digits = 1, caption = "Top 5 models, per BIC score")
+      digits = 1, caption = "Top models, per BIC score")
 ```
 
 
@@ -446,27 +514,27 @@ model.bic %>%
 ```{r Cross Validation to verify RMSE Criteria for various 'p'}
 # Use Cross Validation to verify and choose optimum number of coeff for AR model
 
-choose.p <- function(x, h, p) {
-  arma.model <- arima(x, order = c(p,1,0), include.mean = T)
-  forecast(arma.model, h=h)
-}
-
-co2_1997_residuals_p<-NULL
-max.p<-15
-for(i in 1:max.p) {
-  co2_1997_residuals_p[[i]]<-tsCV(co2_tsb$co2_ppm, 
-                                 choose.p, h=1, p=i)
-}
-
-co2_1997_rmse_results_p<-sapply(co2_1997_residuals_p, 
-                           function(r) sqrt(mean(r^2, na.rm=T)))
-
-data.frame("p"=as.factor(1:max.p),"rmse"=co2_1997_rmse_results_p) %>%
-  ggplot(aes(p,rmse)) +
-  geom_bar(stat="identity",alpha=0.4,fill="cornflowerblue") +
-  theme_economist_white(gray_bg=F) +
-  xlab("P") +
-  ylab("RMSE")
+# choose.p <- function(x, h, p) {
+#   arma.model <- arima(x, order = c(p,1,0), include.mean = T)
+#   forecast(arma.model, h=h)
+# }
+# 
+# co2_1997_residuals_p<-NULL
+# max.p<-15
+# for(i in 1:max.p) {
+#   co2_1997_residuals_p[[i]]<-tsCV(co2_tsb$co2_ppm, 
+#                                  choose.p, h=1, p=i)
+# }
+# 
+# co2_1997_rmse_results_p<-sapply(co2_1997_residuals_p, 
+#                            function(r) sqrt(mean(r^2, na.rm=T)))
+# 
+# data.frame("p"=as.factor(1:max.p),"rmse"=co2_1997_rmse_results_p) %>%
+#   ggplot(aes(p,rmse)) +
+#   geom_bar(stat="identity",alpha=0.4,fill="cornflowerblue") +
+#   theme_economist_white(gray_bg=F) +
+#   xlab("P") +
+#   ylab("RMSE")
 ```
 
 
@@ -474,26 +542,26 @@ data.frame("p"=as.factor(1:max.p),"rmse"=co2_1997_rmse_results_p) %>%
 ```{r Cross Validation to verify RMSE Criteria for various 'q'}
 # Use Cross Validation to verify and choose optimum number of coeff. for MA model
 
-choose.q <- function(x, h, q) {
-  arma.model <- arima(x, order = c(0,2,q), include.mean = T)
-  forecast(arma.model, h=h)
-}
-
-co2_1997_residuals_q<-NULL
-max.q<-15
-for(i in 1:max.q) {
-  co2_1997_residuals_q[[i]]<-tsCV(co2_tsb$co2_ppm, choose.q, h=1, q=i)
-}
-
-co2_1997_rmse_results_p<-sapply(co2_1997_residuals_q, 
-                           function(r) sqrt(mean(r^2, na.rm=T)))
-
-data.frame("q"=as.factor(1:max.q),"rmse"=co2_1997_rmse_results_p) %>%
-  ggplot(aes(q,rmse)) +
-  geom_bar(stat="identity",alpha=0.4,fill="grey") +
-  theme_economist_white(gray_bg=F) +
-  xlab("Q") +
-  ylab("RMSE")
+# choose.q <- function(x, h, q) {
+#   arma.model <- arima(x, order = c(0,2,q), include.mean = T)
+#   forecast(arma.model, h=h)
+# }
+# 
+# co2_1997_residuals_q<-NULL
+# max.q<-15
+# for(i in 1:max.q) {
+#   co2_1997_residuals_q[[i]]<-tsCV(co2_tsb$co2_ppm, choose.q, h=1, q=i)
+# }
+# 
+# co2_1997_rmse_results_p<-sapply(co2_1997_residuals_q, 
+#                            function(r) sqrt(mean(r^2, na.rm=T)))
+# 
+# data.frame("q"=as.factor(1:max.q),"rmse"=co2_1997_rmse_results_p) %>%
+#   ggplot(aes(q,rmse)) +
+#   geom_bar(stat="identity",alpha=0.4,fill="grey") +
+#   theme_economist_white(gray_bg=F) +
+#   xlab("Q") +
+#   ylab("RMSE")
 ```
 ### Model Performance Review
 
@@ -503,6 +571,379 @@ model.bic %>%
   ACF(.resid) %>%
   autoplot()
 ```
+
+## Round 2: WITH DIFFERENCING OR ORDER 1 PLUS 12 MONTH DIFFERENCING (2nd ORDER)
+
+```{r Compare AR, MA and ARMA with differencing}
+aic_bic_scores_1d <- model_orders %>% 
+  dplyr::rowwise() %>% 
+  mutate(family = ifelse(q == 0, "AR", ifelse(p == 0, "MA", "ARMA")))
+
+aic_1d <- c()
+bic_1d <- c()
+for (i in 1:nrow(aic_bic_scores_1d)) {
+  p <- aic_bic_scores_1d$p[i]
+  q <- aic_bic_scores_1d$q[i]
+  aic_1d <- c(aic_1d, try_default(AIC(Arima(co2_tsb$co2_ppm,
+                                 order = c(p, 1, q),
+                                 seasonal = list(order = c(0,1,0), 12))), 
+                            default = NA, quiet = TRUE))
+  bic_1d <- c(bic_1d, try_default(BIC(Arima(co2_tsb$co2_ppm,
+                                 order = c(p, 1, q),
+                                 seasonal = list(order = c(0,1,0), 12))), 
+                            default = NA, quiet = TRUE))
+  
+}
+aic_bic_scores_1d$aic_1d <- aic_1d
+aic_bic_scores_1d$bic_1d <- bic_1d
+aic_bic_scores_1d <- aic_bic_scores_1d %>%
+  filter(!is.na(aic_1d))
+par(mfrow = c(1, 2))
+boxplot(aic_bic_scores_1d$aic_1d ~ aic_bic_scores_1d$family, xlab = "Model family",
+        ylab = "AIC", main = "AIC score per model family")
+boxplot(aic_bic_scores_1d$bic_1d ~ aic_bic_scores_1d$family, xlab = "Model family",
+        ylab = "BIC", main = "BIC score per model family")
+```
+
+```{r}
+kable(aic_bic_scores_1d %>%
+        arrange(aic_1d) %>% 
+        group_by(family) %>% 
+        top_n(-5, aic_1d), 
+      digits = 1, caption = "Top models, per AIC score")
+kable(aic_bic_scores_1d %>% 
+        arrange(bic_1d) %>% 
+        group_by(family) %>% 
+        top_n(-5, bic_1d), 
+      digits = 1, caption = "Top models, per BIC score")
+```
+
+# SARIMA Model with Seasonality (VARY P, D & Q)
+
+## Model ARIMA(5,1,7)(P,1,Q)
+```{r AIC Criteria}
+aic_bic_5p_1d_7q_P_1D_Q <- data.frame(permutations(n = 3, r = 2, v = 0:2, 
+                                  set = FALSE, repeats.allowed = TRUE))
+
+colnames(aic_bic_5p_1d_7q_P_1D_Q) <- c("P","Q")
+aic_bic_5p_1d_7q_P_1D_Q <- aic_bic_5p_1d_7q_P_1D_Q %>% filter(P + Q <= 2)
+
+aic_5p_1d_7q_P_1D_Q <- c()
+bic_5p_1d_7q_P_1D_Q <- c()
+LBox_p_5p_1d_7q_P_1D_Q <- c()
+
+for (i in 1:nrow(aic_bic_5p_1d_7q_P_1D_Q)) {
+  P <- aic_bic_5p_1d_7q_P_1D_Q$P[i]
+  Q <- aic_bic_5p_1d_7q_P_1D_Q$Q[i]
+  model_5p_1d_7q_P_1D_Q <- Arima(co2_tsb$co2_ppm,
+                                 order = c(5, 1, 7),
+                                 seasonal = list(order = c(P,1,Q), 12),
+                                 method = "ML")
+  aic_5p_1d_7q_P_1D_Q <- c(aic_5p_1d_7q_P_1D_Q,
+                            try_default(AIC(model_5p_1d_7q_P_1D_Q), 
+                            default = NA, quiet = TRUE))
+  bic_5p_1d_7q_P_1D_Q <- c(bic_5p_1d_7q_P_1D_Q,
+                            try_default(BIC(model_5p_1d_7q_P_1D_Q), 
+                            default = NA, quiet = TRUE))
+  LBox_p_5p_1d_7q_P_1D_Q <- c(LBox_p_5p_1d_7q_P_1D_Q,
+                               try_default(
+                                 Box.test(model_5p_1d_7q_P_1D_Q$residuals,
+                                 type = "Ljung-Box")$p.value, 
+                            default = NA, quiet = TRUE))
+}
+aic_bic_5p_1d_7q_P_1D_Q$aic <- aic_5p_1d_7q_P_1D_Q
+aic_bic_5p_1d_7q_P_1D_Q$bic <- bic_5p_1d_7q_P_1D_Q
+aic_bic_5p_1d_7q_P_1D_Q$LBox_p <- LBox_p_5p_1d_7q_P_1D_Q
+aic_bic_5p_1d_7q_P_1D_Q <- aic_bic_5p_1d_7q_P_1D_Q %>%
+  filter(!is.na(aic))
+```
+
+```{r}
+kable(aic_bic_5p_1d_7q_P_1D_Q %>%
+        arrange(aic) %>% 
+        top_n(-5, aic), 
+      digits = 1, caption = "Top models, per AIC score")
+kable(aic_bic_5p_1d_7q_P_1D_Q %>% 
+        arrange(bic) %>%
+        top_n(-5, bic), 
+      digits = 1, caption = "Top models, per BIC score")
+```
+```{r}
+ts.plot(co2_tsb, fitted(model_5p_1d_7q_P_1D_Q), lwd=c(1,0.5), lty=c('solid','dashed'), col=c('blue','red'), main='ARIMA(5,1,7)(1,1,1)[12]')
+hist(model_5p_1d_7q_P_1D_Q$residuals, binwidth=0.20, main="Histogram")
+acf(model_5p_1d_7q_P_1D_Q$residuals, main="ACF", lag.max=48)
+pacf(model_5p_1d_7q_P_1D_Q$residuals, main="PACF",  lag.max=48)
+```
+
+
+## Model ARIMA(7,1,8)(P,1,Q)
+```{r AIC Criteria}
+aic_bic_7p_1d_8q_P_1D_Q <- data.frame(permutations(n = 3, r = 2, v = 0:2, 
+                                  set = FALSE, repeats.allowed = TRUE))
+
+colnames(aic_bic_7p_1d_8q_P_1D_Q) <- c("P","Q")
+aic_bic_7p_1d_8q_P_1D_Q <- aic_bic_7p_1d_8q_P_1D_Q %>% filter(P + Q <= 2)
+
+aic_7p_1d_8q_P_1D_Q <- c()
+bic_7p_1d_8q_P_1D_Q <- c()
+LBox_p_7p_1d_8q_P_1D_Q <- c()
+
+for (i in 1:nrow(aic_bic_7p_1d_8q_P_1D_Q)) {
+  P <- aic_bic_7p_1d_8q_P_1D_Q$P[i]
+  Q <- aic_bic_7p_1d_8q_P_1D_Q$Q[i]
+  model_7p_1d_8q_P_1D_Q <- Arima(co2_tsb$co2_ppm,
+                                 order = c(7, 1, 8),
+                                 seasonal = list(order = c(P,1,Q), 12),
+                                 method = "ML")
+  aic_7p_1d_8q_P_1D_Q <- c(aic_7p_1d_8q_P_1D_Q,
+                            try_default(AIC(model_7p_1d_8q_P_1D_Q), 
+                            default = NA, quiet = TRUE))
+  bic_7p_1d_8q_P_1D_Q <- c(bic_7p_1d_8q_P_1D_Q,
+                            try_default(BIC(model_7p_1d_8q_P_1D_Q), 
+                            default = NA, quiet = TRUE))
+  LBox_p_7p_1d_8q_P_1D_Q <- c(LBox_p_7p_1d_8q_P_1D_Q,
+                               try_default(
+                                 Box.test(model_7p_1d_8q_P_1D_Q$residuals,
+                                 type = "Ljung-Box")$p.value, 
+                            default = NA, quiet = TRUE))
+}
+aic_bic_7p_1d_8q_P_1D_Q$aic <- aic_7p_1d_8q_P_1D_Q
+aic_bic_7p_1d_8q_P_1D_Q$bic <- bic_7p_1d_8q_P_1D_Q
+aic_bic_7p_1d_8q_P_1D_Q$LBox_p <- LBox_p_7p_1d_8q_P_1D_Q
+aic_bic_7p_1d_8q_P_1D_Q <- aic_bic_7p_1d_8q_P_1D_Q %>%
+  filter(!is.na(aic))
+```
+
+```{r}
+kable(aic_bic_7p_1d_8q_P_1D_Q %>%
+        arrange(aic) %>% 
+        top_n(-5, aic), 
+      digits = 1, caption = "Top models, per AIC score")
+kable(aic_bic_7p_1d_8q_P_1D_Q %>% 
+        arrange(bic) %>%
+        top_n(-5, bic), 
+      digits = 1, caption = "Top models, per BIC score")
+```
+
+```{r}
+ts.plot(co2_tsb, fitted(model_7p_1d_8q_P_1D_Q), lwd=c(1,0.5), lty=c('solid','dashed'), col=c('blue','red'), main='ARIMA(7,1,8)(1,1,1)[12]')
+hist(model_7p_1d_8q_P_1D_Q$residuals, binwidth=0.20, main="Histogram")
+acf(model_7p_1d_8q_P_1D_Q$residuals, main="ACF", lag.max=48)
+pacf(model_7p_1d_8q_P_1D_Q$residuals, main="PACF",  lag.max=48)
+```
+
+
+
+## Model ARIMA(13,1,1)(P,1,Q)
+```{r AIC Criteria}
+aic_bic_13p_1d_1q_P_1D_Q <- data.frame(permutations(n = 3, r = 2, v = 0:2, 
+                                  set = FALSE, repeats.allowed = TRUE))
+
+colnames(aic_bic_13p_1d_1q_P_1D_Q) <- c("P","Q")
+aic_bic_13p_1d_1q_P_1D_Q <- aic_bic_13p_1d_1q_P_1D_Q %>% filter(P + Q <= 2)
+
+aic_13p_1d_1q_P_1D_Q <- c()
+bic_13p_1d_1q_P_1D_Q <- c()
+LBox_p_13p_1d_1q_P_1D_Q <- c()
+
+for (i in 1:nrow(aic_bic_13p_1d_1q_P_1D_Q)) {
+  P <- aic_bic_13p_1d_1q_P_1D_Q$P[i]
+  Q <- aic_bic_13p_1d_1q_P_1D_Q$Q[i]
+  model_13p_1d_1q_P_1D_Q <- Arima(co2_tsb$co2_ppm,
+                                 order = c(13, 1, 1),
+                                 seasonal = list(order = c(P,1,Q), 12),
+                                 method = "ML")
+  aic_13p_1d_1q_P_1D_Q <- c(aic_13p_1d_1q_P_1D_Q,
+                            try_default(AIC(model_13p_1d_1q_P_1D_Q), 
+                            default = NA, quiet = TRUE))
+  bic_13p_1d_1q_P_1D_Q <- c(bic_13p_1d_1q_P_1D_Q,
+                            try_default(BIC(model_13p_1d_1q_P_1D_Q), 
+                            default = NA, quiet = TRUE))
+  LBox_p_13p_1d_1q_P_1D_Q <- c(LBox_p_13p_1d_1q_P_1D_Q,
+                               try_default(
+                                 Box.test(model_13p_1d_1q_P_1D_Q$residuals,
+                                 type = "Ljung-Box")$p.value, 
+                            default = NA, quiet = TRUE))
+}
+aic_bic_13p_1d_1q_P_1D_Q$aic <- aic_13p_1d_1q_P_1D_Q
+aic_bic_13p_1d_1q_P_1D_Q$bic <- bic_13p_1d_1q_P_1D_Q
+aic_bic_13p_1d_1q_P_1D_Q$LBox_p <- LBox_p_13p_1d_1q_P_1D_Q
+aic_bic_13p_1d_1q_P_1D_Q <- aic_bic_13p_1d_1q_P_1D_Q %>%
+  filter(!is.na(aic))
+```
+
+```{r}
+kable(aic_bic_13p_1d_1q_P_1D_Q %>%
+        arrange(aic) %>% 
+        top_n(-5, aic), 
+      digits = 1, caption = "Top models, per AIC score")
+kable(aic_bic_13p_1d_1q_P_1D_Q %>% 
+        arrange(bic) %>%
+        top_n(-5, bic), 
+      digits = 1, caption = "Top models, per BIC score")
+```
+
+```{r}
+ts.plot(co2_tsb, fitted(model_13p_1d_1q_P_1D_Q), lwd=c(1,0.5), lty=c('solid','dashed'), col=c('blue','red'), main='ARIMA(13,1,1)(1,1,1)[12]')
+hist(model_13p_1d_1q_P_1D_Q$residuals, binwidth=0.20, main="Histogram")
+acf(model_13p_1d_1q_P_1D_Q$residuals, main="ACF", lag.max=48)
+pacf(model_13p_1d_1q_P_1D_Q$residuals, main="PACF",  lag.max=48)
+```
+
+
+## Model ARIMA(4,1,5)(P,1,Q)
+```{r AIC Criteria}
+aic_bic_4p_1d_5q_P_1D_Q <- data.frame(permutations(n = 3, r = 2, v = 0:2, 
+                                  set = FALSE, repeats.allowed = TRUE))
+
+colnames(aic_bic_4p_1d_5q_P_1D_Q) <- c("P","Q")
+aic_bic_4p_1d_5q_P_1D_Q <- aic_bic_4p_1d_5q_P_1D_Q %>% filter(P + Q <= 2)
+
+aic_4p_1d_5q_P_1D_Q <- c()
+bic_4p_1d_5q_P_1D_Q <- c()
+LBox_p_4p_1d_5q_P_1D_Q <- c()
+
+for (i in 1:nrow(aic_bic_4p_1d_5q_P_1D_Q)) {
+  P <- aic_bic_4p_1d_5q_P_1D_Q$P[i]
+  Q <- aic_bic_4p_1d_5q_P_1D_Q$Q[i]
+  model_4p_1d_5q_P_1D_Q <- Arima(co2_tsb$co2_ppm,
+                                 order = c(4, 1, 5),
+                                 seasonal = list(order = c(P,1,Q), 12),
+                                 method = "ML")
+  aic_4p_1d_5q_P_1D_Q <- c(aic_4p_1d_5q_P_1D_Q,
+                            try_default(AIC(model_4p_1d_5q_P_1D_Q), 
+                            default = NA, quiet = TRUE))
+  bic_4p_1d_5q_P_1D_Q <- c(bic_4p_1d_5q_P_1D_Q,
+                            try_default(BIC(model_4p_1d_5q_P_1D_Q), 
+                            default = NA, quiet = TRUE))
+  LBox_p_4p_1d_5q_P_1D_Q <- c(LBox_p_4p_1d_5q_P_1D_Q,
+                               try_default(
+                                 Box.test(model_4p_1d_5q_P_1D_Q$residuals,
+                                 type = "Ljung-Box")$p.value, 
+                            default = NA, quiet = TRUE))
+}
+aic_bic_4p_1d_5q_P_1D_Q$aic <- aic_4p_1d_5q_P_1D_Q
+aic_bic_4p_1d_5q_P_1D_Q$bic <- bic_4p_1d_5q_P_1D_Q
+aic_bic_4p_1d_5q_P_1D_Q$LBox_p <- LBox_p_4p_1d_5q_P_1D_Q
+aic_bic_4p_1d_5q_P_1D_Q <- aic_bic_4p_1d_5q_P_1D_Q %>%
+  filter(!is.na(aic))
+
+
+```
+
+```{r}
+kable(aic_bic_4p_1d_5q_P_1D_Q %>%
+        arrange(aic) %>% 
+        top_n(-5, aic), 
+      digits = 1, caption = "Top models, per AIC score")
+kable(aic_bic_4p_1d_5q_P_1D_Q %>% 
+        arrange(bic) %>%
+        top_n(-5, bic), 
+      digits = 1, caption = "Top models, per BIC score")
+```
+
+```{r}
+ts.plot(co2_tsb, fitted(model_4p_1d_5q_P_1D_Q), lwd=c(1,0.5), lty=c('solid','dashed'), col=c('blue','red'), main='ARIMA(4,1,5)(1,1,1)[12]')
+hist(model_4p_1d_5q_P_1D_Q$residuals, binwidth=0.20, main="Histogram")
+acf(model_4p_1d_5q_P_1D_Q$residuals, main="ACF", lag.max=48)
+pacf(model_4p_1d_5q_P_1D_Q$residuals, main="PACF",  lag.max=48)
+```
+
+
+
+## Model ARIMA(12,1,3)(P,1,Q)
+```{r AIC Criteria}
+aic_bic_12p_1d_3q_P_1D_Q <- data.frame(permutations(n = 3, r = 2, v = 0:2, 
+                                  set = FALSE, repeats.allowed = TRUE))
+
+colnames(aic_bic_12p_1d_3q_P_1D_Q) <- c("P","Q")
+aic_bic_12p_1d_3q_P_1D_Q <- aic_bic_12p_1d_3q_P_1D_Q %>% filter(P + Q <= 2)
+
+aic_12p_1d_3q_P_1D_Q <- c()
+bic_12p_1d_3q_P_1D_Q <- c()
+LBox_p_12p_1d_3q_P_1D_Q <- c()
+
+for (i in 1:nrow(aic_bic_12p_1d_3q_P_1D_Q)) {
+  P <- aic_bic_12p_1d_3q_P_1D_Q$P[i]
+  Q <- aic_bic_12p_1d_3q_P_1D_Q$Q[i]
+  model_12p_1d_3q_P_1D_Q <- Arima(co2_tsb$co2_ppm,
+                                 order = c(12, 1, 3),
+                                 seasonal = list(order = c(P,1,Q), 12),
+                                 method = "ML")
+  aic_12p_1d_3q_P_1D_Q <- c(aic_12p_1d_3q_P_1D_Q,
+                            try_default(AIC(model_12p_1d_3q_P_1D_Q), 
+                            default = NA, quiet = TRUE))
+  bic_12p_1d_3q_P_1D_Q <- c(bic_12p_1d_3q_P_1D_Q,
+                            try_default(BIC(model_12p_1d_3q_P_1D_Q), 
+                            default = NA, quiet = TRUE))
+  LBox_p_12p_1d_3q_P_1D_Q <- c(LBox_p_12p_1d_3q_P_1D_Q,
+                               try_default(
+                                 Box.test(model_12p_1d_3q_P_1D_Q$residuals,
+                                 type = "Ljung-Box")$p.value, 
+                            default = NA, quiet = TRUE))
+  
+}
+aic_bic_12p_1d_3q_P_1D_Q$aic <- aic_12p_1d_3q_P_1D_Q
+aic_bic_12p_1d_3q_P_1D_Q$bic <- bic_12p_1d_3q_P_1D_Q
+aic_bic_12p_1d_3q_P_1D_Q$LBox_p <- LBox_p_12p_1d_3q_P_1D_Q
+aic_bic_12p_1d_3q_P_1D_Q <- aic_bic_12p_1d_3q_P_1D_Q %>%
+  filter(!is.na(aic))
+
+
+```
+
+```{r}
+kable(aic_bic_12p_1d_3q_P_1D_Q %>%
+        arrange(aic) %>% 
+        top_n(-5, aic), 
+      digits = 1, caption = "Top models, per AIC score")
+kable(aic_bic_12p_1d_3q_P_1D_Q %>% 
+        arrange(bic) %>%
+        top_n(-5, bic), 
+      digits = 1, caption = "Top models, per BIC score")
+```
+
+
+
+```{r}
+ts.plot(co2_tsb, fitted(model_12p_1d_3q_P_1D_Q), lwd=c(1,0.5), lty=c('solid','dashed'), col=c('blue','red'), main='ARIMA(12,1,3)(1,1,1)[12]')
+hist(model_12p_1d_3q_P_1D_Q$residuals, binwidth=0.20, main="Histogram")
+acf(model_12p_1d_3q_P_1D_Q$residuals, main="ACF", lag.max=48)
+pacf(model_12p_1d_3q_P_1D_Q$residuals, main="PACF",  lag.max=48)
+```
+
+
+# FORECAST using ARIMA Models
+```{r}
+# Model: ARIMA(7,1,8)(1,1,1)[12]
+Model_Forecast <- co2_tsb %>%
+  model(ARIMA(co2_ppm ~ 0 + pdq(7,1,8) + PDQ(1,1,1), stepwise=FALSE, approximation=FALSE)) %>%
+  forecast(h = 294)
+
+# Comparison
+co2_tsb %>% autoplot(co2_tsb$co2_ppm) +
+  autolayer(Model_Forecast, level=95, alpha=0.2) +
+  theme_minimal() +
+  labs(title="ARIMA Model Forecast to Present")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
