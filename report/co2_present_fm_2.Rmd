@@ -1,0 +1,254 @@
+You will fill this file with all your work from the point of view of the present! 
+
+```{r}
+library(tidyverse)
+library(magrittr)
+library(patchwork)
+
+library(lubridate)
+
+library(tsibble)
+library(feasts)
+library(forecast)
+
+library(sandwich)
+library(lmtest)
+
+library(nycflights13)
+library(blsR)
+
+library(readr)
+
+```
+
+
+```{r Sandeep Work}
+co2_tsb <- co2 %>% as_tsibble()
+colnames(co2_tsb)[2] <- "co2_ppm"
+head(co2_tsb)
+
+co2_1997_linear <- co2_tsb %>%
+  model(TSLM(co2_ppm ~ trend()))
+report(co2_1997_linear)
+augment(co2_1997_linear) %>%
+  ggplot(aes(x=index)) +
+  geom_line(aes(y=.fitted, colour = 'LinearFit')) +
+  geom_line(aes(y=co2_ppm, colour = 'Original')) +
+  labs(title='CO2 ppm vs. Linear Model') +
+  scale_colour_manual(values = c(LinearFit = 'red', Original = 'blue')) +
+  guides(colour = guide_legend(title = 'Legend'))
+# co2_1997_linear %>% 
+#   gg_tsresiduals() +
+#   labs(title = "Residuals of a Linear Model fit")
+```
+
+
+Loading and transforming the dataset. 
+```{r Finnian Work}
+dataw1 <- read.table("https://gml.noaa.gov/webdata/ccgg/trends/co2/co2_weekly_mlo.txt", header=FALSE)
+dataw1 <- dataw1 %>% select(V1, V2, V3, V5) %>% rename("year"=V1, "month"=V2, "day"=V3, "co2"=V5) %>% filter(co2>0)
+dataw1$year_month <- lubridate::make_datetime(year=dataw1$year, month=dataw1$month, tz='UTC') 
+dataw <- dataw1 %>% select(year_month, co2) %>% mutate(year_month = as.Date(year_month, "%Y-%m"))
+dataw <- aggregate(dataw$co2, by=list(year_month=dataw$year_month), FUN=mean) %>% rename("time_index"=year_month, "CO2_avg"=x)
+co2_present <- dataw %>% mutate(time_index = yearmonth(as.character(time_index)))  %>% as_tsibble(index=time_index)
+
+co2_present <- tsibble::fill_gaps(co2_present, CO2_avg=330.5)
+
+##basic plots
+co2_present %>% gg_tsdisplay(CO2_avg, plot_type="partial") +
+  ylab(TeX(r'($CO_2$ parts per million)')) +
+  ggtitle("Time Series, Autocorrelation (acf), Partial Autocorrelation(pacf)")
+
+##examining seasonality
+co2_present %>% gg_season(CO2_avg) +
+  ylab(TeX(r'($CO_2$ parts per million)')) +
+  ggtitle("Annual Seasonality")
+
+co2_present %>%
+  gg_subseries(CO2_avg) +
+  ylab(TeX(r'($CO_2$ parts per million)')) +
+  ggtitle("Seasonal Sub-series for each month")
+
+plot.ts(co2_present$CO2_avg, col = 'red', type = 'l', 
+     xlab = "Year (time period: month)", ylab = "CO2 ppm", 
+     main = TeX(r'(Time-Series plot of $CO_2$ concentration)'))
+abline(h = mean(co2_present), col = 'green', lty = 2)
+lines(stats::filter(co2_present$CO2_avg, sides=2, rep(1, 12)/12), lty = 1, 
+      lwd = 1.5, col = "blue")
+leg.txt <- c("Time-series", "Mean value", 
+             "12-Month Symmetric Moving Average")
+legend("topleft", legend = leg.txt, lty = c(1, 2, 1), lwd = c(1, 1, 1.5), 
+       col = c("red", "green", "blue"), bty = 'n', cex = .8)
+
+##decomposition
+
+co2_decomp <- co2_present %>%
+  model(
+    classical_decomposition(CO2_avg, type = "additive")
+  ) %>%
+  components() %>%
+  autoplot() +
+  labs(title = "Classical additive decomposition")
+
+sum(is.na(co2_present$CO2_avg))
+co2_decomp
+
+##examining just the section above 1979
+
+co2_1998_plus <- dataw1 %>% select(year, month, co2) %>% filter(year > 1997)
+co2_1998_plus$time_index <- lubridate::make_datetime(year=co2_1998_plus$year, month=co2_1998_plus$month, tz='UTC') 
+co2_1998_plus <- co2_1998_plus %>% select(time_index, co2) %>% mutate(time_index = as.Date(time_index))
+co2_1998_plus <- aggregate(co2_1998_plus$co2, by=list(time_index=co2_1998_plus$time_index), FUN=mean) %>% rename("CO2_avg"=x)
+co2_1998_plus <- co2_1998_plus %>% mutate(time_index = yearmonth(as.character(time_index))) %>% as_tsibble( index=time_index)
+
+co2_1998_plus %>% gg_tsdisplay(CO2_avg, plot_type="partial") +
+  ylab(TeX(r'($CO_2$ parts per million)')) +
+  ggtitle("Time Series, Autocorrelation (acf), Partial Autocorrelation(pacf)")
+
+
+## decomposing
+
+co2_decomp <- co2_present %>%
+  model(
+    classical_decomposition(CO2_avg, type = "additive")
+  ) %>%
+  components() %>%
+  autoplot() +
+  labs(title = "Classical additive decomposition")
+
+# detrending the data
+trend <- lm(co2_present$CO2_avg ~ co2_present$time_index)
+summary(trend)
+detrend <- residuals(trend)
+ts.plot(detrend, xlab="Month", ylab="Detrended C02 Levels")
+
+## detrending - differencing
+acf(detrend)
+pacf(detrend)
+differenced <- diff(co2_present$CO2_avg)
+ts.plot(differenced)
+acf(differenced)
+pacf(differenced)
+Box.test(differenced, type="Ljung")
+
+
+##differencing and seasonal differencing
+
+co2_present_annual_plus1<- co2_present$CO2_avg %>%
+  diff(lag=12) %>%
+  diff(lag=1)
+
+Box.test(co2_present_annual_plus1, type="Ljung")
+```
+## Introduction
+The dataset is pulled from the NOAA Global Monitoring Laboratory website for the monthly average CO2 levels in Mauna Loa. Data from March 1958 through april 1974 have been obtained by C David Keeling of the Scripps Insititution of Oceanography. Weekly CO2 values are constructed from daily mean values. NOAA has "confidence that the CO2 measurements made at the Mauna Loa observatory reflect truth about our global atmosphere," given that the observatory is at the summit of Mauna Loa at an altitude of 3400 meters and can measure air masses that are representative of large areas, the measurements are frequently and rigorously calibrated, and ongoing comparisons are made to ensure data accuracy. 
+The NOAA GML measures the "mole fraction" of CO2 in dry air, the number of CO2 molecules in a given number of molecules of air after the removal of water vapor. This process is done given that the dry mole fraction reflects the addition and removal of the gas given that dry air does not change when air expands upon heating or ascending to a higher altitude where the pressure is lower. 
+
+The data is missing values for one week in 1954, and that value has been replaced by the average of its surrounding values on each side. Monthly averages are constructed by taking simple averages of values across each month of the time series. 
+
+From plotting the time series of the data, we see a strong upward trend and likely aspects of seasonality given the oscillating pattern of the time series throughout the trend. 
+From the ACF of the CO2, we see high (and statistically significant) correlation for many lags (100 lags shown on the above plot). Significance is maintained through ~250 lags. This high level of autocorrelation is indicative of trended data. 
+Observing the PACF plot, we see no statistically significant values past the first lag. 
+Examining just the years after 1979, we see a fluctuation of autocorrelations on the ACF plot, dipping below statistical significant at ~75 lags. The PACF plot shows statistically significant values ocurring for the first two lags and then at additional lags further out. 
+From the linear model of the co2 levels on the time index, we see a highly statistically significant linear relationship between the two variables, as expected from the trends observed in the time series plot and the results of the ACF plot. 
+To examine the detrending data, we will look at the residuals of the trend model. 
+We see a parabolic shape and continued seasonality. 
+We still see highly statistically significant autocorrelation in the ACF plot, and PACF values that remain statistically significant. 
+The differenced time series appears more like a white noise model. 
+Even in the differenced data, we still see statistically significant autocorrelations, which is not indicative of a white noise model. 
+The Ljung-Box test has a very small p value, indicating that we should reject the null hypothesis that the residuals of our time series model are independent. 
+
+```{r Satheesh Work}
+#co2_tsb[, c(2)] <- sapply(co2_tsb[, c(2)], as.numeric)
+## Bootstrap
+fit <- co2_tsb %>% model(TSLM(co2_ppm ~ trend()+season()))
+sim1 <- fit %>% generate(h = 293, times = 3, bootstrap = TRUE)
+
+
+co2_tsb %>%
+  ggplot(aes(x = index)) +
+  geom_line(aes(y = co2_ppm)) +
+  geom_line(aes(y = .sim, colour = as.factor(.rep)), data = sim1) +
+  labs(title="$CO_2$ forecast", y="co_2" ) +
+  guides(colour = "none")
+
+## Trend + Season
+co2_1997_linear <- co2_tsb %>%
+  model(TSLM(co2_ppm ~ trend()+season()))
+sim <- co2_1997_linear %>% forecast(h=293, level = c(90, 95), ts = TRUE, 
+                                    times = 120, bootstrap = TRUE)
+sim %>%
+  autoplot(co2_tsb) + 
+  labs(y = "co_2", title = "$CO_2$ forecast")
+print("Accuracy of trend + season")
+
+accuracy(sim$.mean, co2_1998_plus$co2_ppm)
+
+
+co2_1998_plus_copy <- co2_1998_plus %>% select(time_index, CO2_avg)
+colnames(co2_1998_plus_copy)[2] <- "co2_ppm"
+colnames(co2_1998_plus_copy)[1] <- "index"
+sim %>% accuracy(co2_1998_plus_copy, list(winkler = winkler_score), level = 80)
+## Trend 
+co2_1997_linear <- co2_tsb %>%
+  model(TSLM(co2_ppm ~ trend()))
+sim <- co2_1997_linear %>% forecast(h=293, level = c(90, 95), ts = TRUE, 
+                                    times = 120, bootstrap = TRUE)
+sim %>%
+  autoplot(co2_tsb) + 
+  labs(y = "co_2", title = "$CO_2$ forecast")
+print("Accuracy of trend")
+accuracy(sim$.mean, co2_1998_plus$co2_ppm)
+sim %>% accuracy(co2_1998_plus_copy, list(winkler = winkler_score), level = 80)
+
+```
+
+
+```{r Finnian Work 2.5}
+##Seasonally adjust the weekly nOAA data 
+##lagging at 12 for annual seasonal, can change to other number for annual "seasons"
+season_num <- 12
+co2_present$seasonally_adjusted_co2 <- difference(co2_present$CO2_avg, lag=season_num)
+
+##split into seasonally adjusted and nonseasonally adjusted
+SA_co2_present <- co2_present %>% select(time_index, seasonally_adjusted_co2)
+NSA_co2_present <- co2_present %>% select(time_index, CO2_avg)
+
+##split test and training sets
+SA_co2_present_train <- SA_co2_present %>% filter(time_index < yearmonth("2020-08-01"))
+SA_co2_present_test <- SA_co2_present %>% filter(time_index > yearmonth("2020-07-01"))
+
+NSA_co2_present_train <- NSA_co2_present %>% filter(time_index < yearmonth("2020-08-01"))
+NSA_co2_present_test <- NSA_co2_present %>% filter(time_index > yearmonth("2020-07-01"))
+
+
+##fit ARIMA models for SA and forecasts
+
+sa_present_fit_best <- auto.arima(y=SA_co2_present_train$seasonally_adjusted_co2, max.p=12, max.P=12, max.Q=0, max.d=2, max.q = 0, max.D=2)
+
+
+sa_forecast <- forecast(SA_co2_present_train$seasonally_adjusted_co2, model=sa_present_fit_best, h=24)
+
+plot(sa_forecast)
+
+
+nsa_present_fit_best <- auto.arima(y=NSA_co2_present_train$CO2_avg, max.p=12, max.P=12, max.Q=0, max.d=2, max.q = 0, max.D=2)
+
+
+
+nsa_forecast <- forecast(NSA_co2_present_train$CO2_avg, model=nsa_present_fit_best, h=24)
+
+plot(nsa_forecast)
+
+##fits
+
+fit_NSA <- NSA_co2_present_train %>% model(TSLM(CO2_avg ~ trend()+season())) %>% forecast(h="2 years")
+fit_SA <- SA_co2_present_train %>% model(TSLM(seasonally_adjusted_co2 ~ trend()+season())) %>% forecast(h="2 years")
+
+
+##accuracies 
+
+accuracy(fit_NSA, NSA_co2_present_test)
+accuracy(fit_SA, SA_co2_present_test)
+
+```
