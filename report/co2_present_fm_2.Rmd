@@ -20,7 +20,6 @@ library(dplyr)
 library(readr)
 library(fable)
 library(gridExtra)
-library(latex2exp)
 ```
 
 ```{r Sandeep Work}
@@ -179,6 +178,7 @@ Even in the differenced data, we still see statistically significant autocorrela
 The Ljung-Box test has a very small p value, indicating that we should reject the null hypothesis that the residuals of our time series model are independent. 
 
 
+
 ## Task 2b: Compare linear model forecasts against realized CO2
 
 ```{r Compare Linear Model}
@@ -276,7 +276,7 @@ how far the observation is outside the interval. A score of 2.6 for 80% confiden
 interval and 3.28 for 95% confidence interval shows the forecast-ed values are 
 not way off.
 
-4) The trend is not captured well. **This is evident from the 90.6% increase in the 
+4) The trend is not captured well. This is evident from the **90.6% increase** in the 
 RMSE values for the last 36 months compared to the first 36 months - 1.18415 vs 
 0.6213753. Thus, the small unobserved trend in the residuals for the initial forecast-ed 
 values create a large effect in the far future forecasts - **the butterfly effect** is the 
@@ -362,7 +362,7 @@ are higher than the Linear model.
 test. A score of 37.3 for 80% confidence interval and 47.13 for 95% confidence interval 
 shows the forecast-ed values are way off.
 
-4) The trend is not captured well. **This is evident from the 1200% increase in the 
+4) The trend is not captured well. This is evident from the **1200%** increase in the 
 RMSE values for the last 36 months compared to the first 36 months - 16.19685 vs 
 1.187938. Thus, the small unobserved trend in the residuals for the initial forecast-ed 
 values create a large effect in the far future forecasts - **the butterfly effect**.
@@ -370,12 +370,83 @@ values create a large effect in the far future forecasts - **the butterfly effec
 Based on the above observations, **the ARIMA model consistently under predicts** and
 no better than the linear model predictions.
 
+???Describe how the Keeling Curve evolved from 1997 to the present.???
+
 ## Task 4b: Evaluate the performance of 1997 linear and ARIMA models
 
-```{r 4b}
+```{r Evaluate the performance of 1997 linear and ARIMA models}
+arima.fit <- co2_tsb %>% model(ARIMA(co2_ppm ~ 0 + pdq(7,1,8) + PDQ(1,1,1),
+                               stepwise=FALSE, approximation=FALSE))
+arima.sim <- arima.fit %>% forecast(h = 424)
+tail(arima.sim$.mean)
 
+linear.fit <- co2_tsb %>% model(TSLM(co2_ppm ~ trend() + I(trend()^2) + season()))
+linear.sim <- linear.fit %>% forecast(h = 424)
+tail(linear.sim$.mean)
+
+linear.sim.295 <- linear.fit %>% forecast(h = 295)
+arima.fit.295 <- arima.fit %>% forecast(h = 295)
+all.forecast <- bind_cols(co2_1998_plus, linear.sim.295$.mean, arima.fit.295$.mean)
+
+colnames(all.forecast)[3] <- "linear"
+colnames(all.forecast)[4] <- "arima"
+forecast.resi <- all.forecast %>%
+  mutate(linear.residual = co2_ppm-linear) %>%
+  mutate(arima.residual  = co2_ppm-arima)
+
+ttest.resi <- t.test(forecast.resi$linear.residual, 
+                     forecast.resi$arima.residual, alternative = c("two.sided"))
+print("Residual t-test Result")
+print(ttest.resi)
+
+n <- 36
+tail.data <- tail(forecast.resi, n)
+head.data <- head(forecast.resi, n)
+print("RMSE of Last 36 months - ARIMA")
+print(sqrt(mean((tail.data$arima.residual)^2)))
+print("RMSE of First 36 months - ARIMA")
+print(sqrt(mean((head.data$arima.residual)^2)))
+
+print("RMSE of Last 36 months - Linear")
+print(sqrt(mean((tail.data$linear.residual)^2)))
+print("RMSE of First 36 months - Linear")
+print(sqrt(mean((head.data$linear.residual)^2)))
+
+print("Accuracy of Linear Model")
+accuracy(forecast.resi$linear, co2_1998_plus$co2_ppm)
+print("Accuracy of ARIMA Model")
+accuracy(forecast.resi$arima, co2_1998_plus$co2_ppm)
+
+Box.test(forecast.resi$linear.residual, lag = 1, type = c("Ljung-Box"), fitdf = 0)
+Box.test(forecast.resi$arima.residual, lag = 1, type = c("Ljung-Box"), fitdf = 0)
 ```
+**Explanation**
 
+???Explain how the model meets 420ppm???
+
+The forecasting performance of the models are assessed by a test and two metrics.
+
+1) **t-test** and **Box test**
+
+2) **The Butterfly effect**
+
+3) **Error Metrics**
+
+1) t-test determines whether the means of two groups are equal to each other.
+True difference in means is not equal to 0 for the residuals of Linear and Arima 
+tells us that the models have different means
+
+2)  **The butterfly effect** is the sensitive dependence on initial conditions 
+in which a small change in one state of a deterministic nonlinear system can result 
+in large differences in a later state. A **90.6% increase** in the 
+RMSE values for the last 36 months compared to the first 36 months - 1.18415 vs 
+0.6213753 of the linear model proves the trend is not fully captured. Thus, 
+the small unobserved trend in the residuals for the initial forecast-ed 
+values create a large effect in the far future forecasts. Also, a **1200%** increase in the 
+RMSE values for the last 36 months compared to the first 36 months - 16.19685 vs 
+1.187938 for the ARIMA model echoes the same.
+
+3) ME, RMSE, MAE, MPE, MAPE: ???
 
 
 
