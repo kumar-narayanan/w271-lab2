@@ -16,9 +16,29 @@ library(lmtest)
 
 library(nycflights13)
 library(blsR)
-
+library(dplyr)
 library(readr)
+library(fable)
+library(gridExtra)
+library(latex2exp)
+```
 
+```{r Sandeep Work}
+co2_tsb <- co2 %>% as_tsibble()
+colnames(co2_tsb)[2] <- "co2_ppm"
+
+co2_1997_linear <- co2_tsb %>% model(TSLM(co2_ppm ~ trend()))
+report(co2_1997_linear)
+augment(co2_1997_linear) %>%
+  ggplot(aes(x=index)) +
+  geom_line(aes(y=.fitted, colour = 'LinearFit')) +
+  geom_line(aes(y=co2_ppm, colour = 'Original')) +
+  labs(title='CO2 ppm vs. Linear Model') +
+  scale_colour_manual(values = c(LinearFit = 'red', Original = 'blue')) +
+  guides(colour = guide_legend(title = 'Legend'))
+# co2_1997_linear %>% 
+#   gg_tsresiduals() +
+#   labs(title = "Residuals of a Linear Model fit")
 ```
 
 
@@ -158,50 +178,205 @@ The differenced time series appears more like a white noise model.
 Even in the differenced data, we still see statistically significant autocorrelations, which is not indicative of a white noise model. 
 The Ljung-Box test has a very small p value, indicating that we should reject the null hypothesis that the residuals of our time series model are independent. 
 
-```{r Satheesh Work}
-#co2_tsb[, c(2)] <- sapply(co2_tsb[, c(2)], as.numeric)
-## Bootstrap
-fit <- co2_tsb %>% model(TSLM(co2_ppm ~ trend()+season()))
-sim1 <- fit %>% generate(h = 293, times = 3, bootstrap = TRUE)
 
+## Task 2b: Compare linear model forecasts against realized CO2
 
-co2_tsb %>%
+```{r Compare Linear Model}
+set.seed(44)
+colnames(co2_1998_plus)[2] <- "co2_ppm"
+
+fit <- co2_tsb %>% model(TSLM(co2_ppm ~ trend() + I(trend()^2) + season()))
+
+simulation <- fit %>% forecast(h = 295)
+simulation.with.bootstrap <- fit %>% forecast(h = 295, times = 50, bootstrap = TRUE)
+
+aug <- fit %>% augment()
+print("Innnovation Residual Mean")
+print(mean(aug$.resid))
+qqnorm(aug$.resid, pch = 1, frame = FALSE, xlab = "Fitted", ylab = "Residual") 
+fit %>% gg_tsresiduals()
+
+p1<-co2_tsb %>%
   ggplot(aes(x = index)) +
   geom_line(aes(y = co2_ppm)) +
-  geom_line(aes(y = .sim, colour = as.factor(.rep)), data = sim1) +
-  labs(title="$CO_2$ forecast", y="co_2" ) +
+  geom_line(aes(y = .mean, colour="red"), data = simulation) +
+  labs(title="CO_2 forecast - Linear", y="co_2" ) +
   guides(colour = "none")
 
-## Trend + Season
-co2_1997_linear <- co2_tsb %>%
-  model(TSLM(co2_ppm ~ trend()+season()))
-sim <- co2_1997_linear %>% forecast(h=293, level = c(90, 95), ts = TRUE, 
-                                    times = 120, bootstrap = TRUE)
-sim %>%
-  autoplot(co2_tsb) + 
-  labs(y = "co_2", title = "$CO_2$ forecast")
+p2<-co2_tsb %>%
+  ggplot(aes(x = index)) +
+  geom_line(aes(y = co2_ppm)) +
+  geom_line(aes(y = .mean, colour="red"), data = simulation.with.bootstrap) +
+  labs(title="CO_2 forecast with Bootstrap - Linear", y="co_2" ) +
+  guides(colour = "none")
+grid.arrange(p1,p2, nrow=2)
 print("Accuracy of trend + season")
+colnames(co2_1998_plus)[1] <- "index"
+accuracy(simulation$.mean, co2_1998_plus$co2_ppm)
+print("Accuracy of trend + season with Bootstrap")
+accuracy(simulation.with.bootstrap$.mean, co2_1998_plus$co2_ppm)
 
-accuracy(sim$.mean, co2_1998_plus$co2_ppm)
+accuracy(simulation, co2_1998_plus,list(winkler = winkler_score), level = 80)
+accuracy(simulation.with.bootstrap, co2_1998_plus, list(winkler = winkler_score), level = 80)
+accuracy(simulation, co2_1998_plus, list(winkler = winkler_score), level = 95)
+accuracy(simulation.with.bootstrap, co2_1998_plus, list(winkler = winkler_score), level = 95)
 
+n <- 36
+tail.actual <- tail(co2_1998_plus$co2_ppm, n)
+tail.pred <- tail(simulation$.mean, n)
+print("RMSE of Last 36 months")
+print(sqrt(mean((tail.actual-tail.pred)^2)))
 
-co2_1998_plus_copy <- co2_1998_plus %>% select(time_index, CO2_avg)
-colnames(co2_1998_plus_copy)[2] <- "co2_ppm"
-colnames(co2_1998_plus_copy)[1] <- "index"
-sim %>% accuracy(co2_1998_plus_copy, list(winkler = winkler_score), level = 80)
-## Trend 
-co2_1997_linear <- co2_tsb %>%
-  model(TSLM(co2_ppm ~ trend()))
-sim <- co2_1997_linear %>% forecast(h=293, level = c(90, 95), ts = TRUE, 
-                                    times = 120, bootstrap = TRUE)
-sim %>%
-  autoplot(co2_tsb) + 
-  labs(y = "co_2", title = "$CO_2$ forecast")
-print("Accuracy of trend")
-accuracy(sim$.mean, co2_1998_plus$co2_ppm)
-sim %>% accuracy(co2_1998_plus_copy, list(winkler = winkler_score), level = 80)
+head.actual <- head(co2_1998_plus$co2_ppm, n)
+head.pred <- head(simulation$.mean, n)
+print("RMSE of First 36 months")
+print(sqrt(mean((head.actual-head.pred)^2)))
+```
+**Linear Model Explanation**
+
+To begin with let's take a look at the residual of the fitted linear model. A 
+good forecasting method will yield innovation residuals with the following properties:
+
+1) The innovation residuals are uncorrelated. If there are correlations between 
+innovation residuals, then there is information left in the residuals which should 
+be used in computing forecasts.
+
+2) The innovation residuals have zero mean. If they have a mean other than zero, 
+then the forecasts are biased.The innovation residuals also fails to show us the 
+white noise. Thus we anticipate the forecast-ed values to not reflect the full 
+absorption of trend and seasonality.
+
+3) The innovation residuals have constant variance. This is known as “homoscedasticity”.
+
+4) The innovation residuals are normally distributed.
+
+Looking at the ACF, there is a strong auto-correlation between the preset values 
+of the series and the lagged values. So we conclude the residuals are correlated.
+The Innovation mean is close to zero. The innovation residuals have near constant 
+variance. The innovation residuals are normally distributed in the histogram plot.
+
+As the residual still have trend/seasonality left in it, while forecasting, the
+team explored both with **Residual Re-sampling** via bootstrap residuals and without
+boot-straping residuals to explore how well the model behaves. 
+
+As expected the forecast-ed model have a few positives and pitfalls. 
+
+1) The Seasonality is consistently under estimated. This is evident from the height
+of the seasonality smaller than the training data in both boot-strapped and 
+non-boot-strapped forecasts.
+
+2) The RMSE and other error metrics are reasonably small.
+
+3) To evaluate the distributional forecast accuracy our team employed **Winkler Score** 
+test. The Winkler score can be interpreted like an absolute error. For observations 
+that fall within the interval, the Winkler score is simply the length of the interval. 
+So low scores are associated with narrow intervals. However, if the observation 
+falls outside the interval, the penalty applies, with the penalty proportional to 
+how far the observation is outside the interval. A score of 2.6 for 80% confidence
+interval and 3.28 for 95% confidence interval shows the forecast-ed values are 
+not way off.
+
+4) The trend is not captured well. **This is evident from the 90.6% increase in the 
+RMSE values for the last 36 months compared to the first 36 months - 1.18415 vs 
+0.6213753. Thus, the small unobserved trend in the residuals for the initial forecast-ed 
+values create a large effect in the far future forecasts - **the butterfly effect** is the 
+sensitive dependence on initial conditions in which a small change in one state of a 
+deterministic nonlinear system can result in large differences in a later state.
+
+Based on the above observations, **the best linear model consistently under predicts**.
+
+## Task 3b: Compare ARIMA models forecasts against realized CO2
+
+```{r Compare ARIMA Model}
+set.seed(44)
+colnames(co2_1998_plus)[2] <- "co2_ppm"
+
+fit <- co2_tsb %>% model(ARIMA(co2_ppm ~ 0 + pdq(7,1,8) + PDQ(1,1,1), 
+                               stepwise=FALSE, approximation=FALSE)) 
+
+simulation <- fit %>% forecast(h = 295)
+simulation.with.bootstrap <- fit %>% forecast(h = 295, times = 50, bootstrap = TRUE)
+
+aug <- fit %>% augment()
+print("Innnovation Residual Mean")
+print(mean(aug$.resid))
+qqnorm(aug$.resid, pch = 1, frame = FALSE, xlab = "Fitted", ylab = "Residual") 
+fit %>% gg_tsresiduals()
+
+p1<-co2_tsb %>%
+  ggplot(aes(x = index)) +
+  geom_line(aes(y = co2_ppm)) +
+  geom_line(aes(y = .mean, colour="red"), data = simulation) +
+  labs(title="CO_2 forecast - Linear", y="co_2" ) +
+  guides(colour = "none")
+
+p2<-co2_tsb %>%
+  ggplot(aes(x = index)) +
+  geom_line(aes(y = co2_ppm)) +
+  geom_line(aes(y = .mean, colour="red"), data = simulation.with.bootstrap) +
+  labs(title="CO_2 forecast with Bootstrap - Linear", y="co_2" ) +
+  guides(colour = "none")
+grid.arrange(p1,p2, nrow=2)
+print("Accuracy of trend + season")
+colnames(co2_1998_plus)[1] <- "index"
+accuracy(simulation$.mean, co2_1998_plus$co2_ppm)
+print("Accuracy of trend + season with Bootstrap")
+accuracy(simulation.with.bootstrap$.mean, co2_1998_plus$co2_ppm)
+
+accuracy(simulation, co2_1998_plus,list(winkler = winkler_score), level = 80)
+accuracy(simulation.with.bootstrap, co2_1998_plus, list(winkler = winkler_score), level = 80)
+accuracy(simulation, co2_1998_plus, list(winkler = winkler_score), level = 95)
+accuracy(simulation.with.bootstrap, co2_1998_plus, list(winkler = winkler_score), level = 95)
+
+n <- 36
+tail.actual <- tail(co2_1998_plus$co2_ppm, n)
+tail.pred <- tail(simulation$.mean, n)
+print("RMSE of Last 36 months")
+print(sqrt(mean((tail.actual-tail.pred)^2)))
+
+head.actual <- head(co2_1998_plus$co2_ppm, n)
+head.pred <- head(simulation$.mean, n)
+print("RMSE of First 36 months")
+print(sqrt(mean((head.actual-head.pred)^2)))
+```
+**ARIMA Model Explanation**
+
+To begin with let's take a look at the residual of the fitted linear model. A 
+good forecasting method will yield the above mentioned innovation residual properties.
+
+ACF strongly reflects white noise. So we conclude the residuals are not correlated.
+The Innovation mean is close to zero, but substantially higher than the linear model. 
+The innovation residuals have near constant variance. The innovation residuals are 
+normally distributed in the histogram plot.
+
+The forecast-ed model is not exhibiting substantial difference to the Linear model.
+
+1) The Seasonality is estimated better than the Linear model. This is evident from the height
+of the seasonality relatively closer to the training data in both boot-strapped and 
+non-boot-strapped forecasts.
+
+2) The RMSE and other error metrics are high. As a matter of fact, all the error metrics
+are higher than the Linear model.
+
+3) To evaluate the distributional forecast accuracy our team employed **Winkler Score** 
+test. A score of 37.3 for 80% confidence interval and 47.13 for 95% confidence interval 
+shows the forecast-ed values are way off.
+
+4) The trend is not captured well. **This is evident from the 1200% increase in the 
+RMSE values for the last 36 months compared to the first 36 months - 16.19685 vs 
+1.187938. Thus, the small unobserved trend in the residuals for the initial forecast-ed 
+values create a large effect in the far future forecasts - **the butterfly effect**.
+
+Based on the above observations, **the ARIMA model consistently under predicts** and
+no better than the linear model predictions.
+
+## Task 4b: Evaluate the performance of 1997 linear and ARIMA models
+
+```{r 4b}
 
 ```
+
+
 
 
 ```{r Finnian Work 2.5}
