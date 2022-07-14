@@ -717,10 +717,669 @@ In this report we started with an analysis of the data (commonly referred to as 
 
 While we can look at the metrics of the model (AIC, BIC, Ljung-Box test etc.) and try to refine the model we don't have a pragmatic way as yet to check the forecast. The one take away is that, at least qualitatively, we see a linear trend in the amount of $CO_2$ in our atmosphere. This alone should give us a cause for concern. We just can't continue business as usual. In a larger sense the exact amount of $CO_2$ that we'll see in the atmosphere is less important than the qualitative trend line. We also see the role the plants and forest play in absorbing $CO_2$. If this report is able to encourage readers to reduce the amount of $CO_2$ we emit we believe that the large goal is achieved. We can and will continue to refine the model as more data comes in to get a good enough model, which is what is realistically achievable.
 
-\bibliographystyle{aea}
-\bibliography{references}
+\newpage
 
-\appendix
-\section{Appendix: Model Robustness}
+## Introduction
+abstract: | 
+ The message from the latest Intergovernmental Panel on Climate Change (IPCC) report released in April 2022 on the topic of climate change mitigation is clear: urgent and drastic action is needed if we are to limit global warming to 1.5°C. Fossil fuel based Bitcoin Mining, electricity usage for cellphone and computer, industrial pollution, water contamination, and others play a critical role in the global rise in temperature. IPCC has been examining these trends for more than sixty years. The incessant use of electric gadgets and the rising attraction towards mining digital currencies enforce us to solve the problems in newer ways like a circular economy, carbon capture and storage and greener cities. This report adds new findings and alarming predictions for the next decade.
+output: pdf_document
+---
 
-While the most plausible model that we estimate is reported in the main, "Modeling" section, in this appendix to the article we examine alternative models. Here, our intent is to provide a skeptic that does not accept our assessment of this model as an ARIMA of order (1,2,3) an understanding of model forecasts under alternative scenarios. 
+The data set is pulled from the NOAA Global Monitoring Laboratory website for the monthly average CO2 levels in Mauna Loa. Data from March 1958 through April 1974 have been obtained by C.David Keeling of the Scripps Insititution of Oceanography. Weekly CO2 values are constructed from daily mean values. NOAA has "confidence that the CO2 measurements made at the Mauna Loa observatory reflect truth about our global atmosphere," given that the observatory is at the summit of Mauna Loa at an altitude of 3400 meters and can measure air masses that are representative of large areas, the measurements are frequently and rigorously calibrated, and ongoing comparisons are made to ensure data accuracy. 
+The NOAA GML measures the "mole fraction" of CO2 in dry air, the number of CO2 molecules in a given number of molecules of air after the removal of water vapor. This process is done given that the dry mole fraction reflects the addition and removal of the gas given that dry air does not change when air expands upon heating or ascending to a higher altitude where the pressure is lower. 
+The data is missing values for one week in 1954, and that value has been replaced by the average of its surrounding values on each side. Monthly averages are constructed by taking simple averages of values across each month of the time series. 
+
+From plotting the time series of the data, we see a strong upward trend and likely aspects of seasonality given the oscillating pattern of the time series throughout the trend. From the ACF of the CO2, we see high (and statistically significant) correlation for many lags (100 lags shown on the above plot). Significance is maintained through ~250 lags. This high level of autocorrelation is indicative of trended data. 
+Observing the PACF plot, we see no statistically significant values past the first lag. 
+
+```{r Data Pull, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
+dataw1 <- read.table("https://gml.noaa.gov/webdata/ccgg/trends/co2/co2_weekly_mlo.txt", header=FALSE)
+dataw1 <- dataw1 %>% select(V1, V2, V3, V5) %>% rename("year"=V1, "month"=V2, "day"=V3, "co2"=V5) %>% filter(co2>0)
+dataw1$year_month <- lubridate::make_datetime(year=dataw1$year, month=dataw1$month, tz='UTC') 
+dataw <- dataw1 %>% select(year_month, co2) %>% mutate(year_month = as.Date(year_month, "%Y-%m"))
+dataw <- aggregate(dataw$co2, by=list(year_month=dataw$year_month), FUN=mean) %>% rename("time_index"=year_month, "CO2_avg"=x)
+co2_present <- dataw %>% mutate(time_index = yearmonth(as.character(time_index)))  %>% as_tsibble(index=time_index)
+
+co2_present <- tsibble::fill_gaps(co2_present, CO2_avg=330.5)
+
+##basic plots
+co2_present %>% gg_tsdisplay(CO2_avg, plot_type="partial") +
+  ylab(TeX(r'($CO_2$ parts per million)')) +
+  ggtitle("Time Series, Autocorrelation (acf), Partial Autocorrelation(pacf)")
+
+co2_tsb <- co2 %>% as_tsibble()
+colnames(co2_tsb)[2] <- "co2_ppm"
+```
+
+``` {r examining seasonality, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
+##examining seasonality
+co2_present %>% gg_season(CO2_avg) +
+  ylab(TeX(r'($CO_2$ parts per million)')) +
+  ggtitle("Annual Seasonality")
+
+co2_present %>%
+  gg_subseries(CO2_avg) +
+  ylab(TeX(r'($CO_2$ parts per million)')) +
+  ggtitle("Seasonal Sub-series for each month")
+
+plot.ts(co2_present$CO2_avg, col = 'red', type = 'l', 
+     xlab = "Year (time period: month)", ylab = "CO2 ppm", 
+     main = TeX(r'(Time-Series plot of $CO_2$ concentration)'))
+lines(stats::filter(co2_present$CO2_avg, sides=2, rep(1, 12)/12), lty = 1, 
+      lwd = 1.5, col = "blue")
+leg.txt <- c("Time-series", 
+             "12-Month Symmetric Moving Average")
+legend("topleft", legend = leg.txt, lty = c(1, 1, 1), lwd = c(1, 1, 1.5), 
+       col = c("red", "blue"), bty = 'n', cex = .8)
+```
+From the above plots, we observe a strong seasonal trend, persistent across years. 
+
+
+``` {r decomposition, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
+##decomposition
+
+co2_decomp <- co2_present %>%
+  model(
+    classical_decomposition(CO2_avg, type = "additive")
+  ) %>%
+  components() %>%
+  autoplot() +
+  labs(title = "Classical additive decomposition")
+co2_decomp
+
+```
+Following the observation of strong seasonality, we can decompose the time series and observe the trend of the data as well as the seasonality. 
+
+``` {r examining just the section above 1979, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
+##examining just the section above 1979
+
+co2_1998_plus <- dataw1 %>% select(year, month, co2) %>% filter(year > 1997)
+co2_1998_plus$time_index <- lubridate::make_datetime(year=co2_1998_plus$year, month=co2_1998_plus$month, tz='UTC') 
+co2_1998_plus <- co2_1998_plus %>% select(time_index, co2) %>% mutate(time_index = as.Date(time_index))
+co2_1998_plus <- aggregate(co2_1998_plus$co2, by=list(time_index=co2_1998_plus$time_index), FUN=mean) %>% rename("CO2_avg"=x)
+co2_1998_plus <- co2_1998_plus %>% mutate(time_index = yearmonth(as.character(time_index))) %>% as_tsibble( index=time_index)
+
+co2_1998_plus %>% gg_tsdisplay(CO2_avg, plot_type="partial") +
+  ylab(TeX(r'($CO_2$ parts per million)')) +
+  ggtitle("Time Series, Autocorrelation (acf), Partial Autocorrelation(pacf)")
+
+```
+Examining just the years after 1979, we see a fluctuation of autocorrelations on the ACF plot, dipping below statistical significant at ~75 lags. The PACF plot shows statistically significant values ocurring for the first two lags and then at additional lags further out. 
+From the linear model of the co2 levels on the time index, we see a highly statistically significant linear relationship between the two variables, as expected from the trends observed in the time series plot and the results of the ACF plot. 
+To examine the detrending data, we will look at the residuals of the trend model. 
+
+``` {r detrending the data, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
+# detrending the data
+trend <- lm(co2_present$CO2_avg ~ co2_present$time_index)
+summary(trend)
+detrend <- residuals(trend)
+ts.plot(detrend, xlab="Month", ylab="Detrended C02 Levels")
+acf(detrend)
+pacf(detrend)
+```
+
+Detrending the data we still see the seasonal pattern and somewhat of a quadratic form. We still see highly statistically significant autocorrelation in the ACF plot, and PACF values that remain statistically significant. 
+
+``` {r detrending - differencing, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
+## detrending - differencing
+
+differenced <- diff(co2_present$CO2_avg)
+ts.plot(differenced)
+acf(differenced)
+pacf(differenced)
+Box.test(differenced, type="Ljung")
+```
+The differenced time series appears more like a white noise model. 
+Even in the differenced data, we still see statistically significant autocorrelations, which is not indicative of a white noise model. 
+The Ljung-Box test has a very small p value, indicating that we should reject the null hypothesis that the residuals of our time series model are independent. 
+
+## Task 2b: Compare linear model forecasts against realized CO2
+
+```{r Compare Linear Model, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
+set.seed(44)
+colnames(co2_1998_plus)[2] <- "co2_ppm"
+
+fit <- co2_tsb %>% model(TSLM(co2_ppm ~ trend() + I(trend()^2) + season()))
+
+simulation <- fit %>% forecast(h = 295)
+simulation.with.bootstrap <- fit %>% forecast(h = 295, times = 50, bootstrap = TRUE)
+
+aug <- fit %>% augment()
+print("Innnovation Residual Mean")
+print(mean(aug$.resid))
+qqnorm(aug$.resid, pch = 1, frame = FALSE, xlab = "Fitted", ylab = "Residual") 
+qqline(aug$.resid)
+fit %>% gg_tsresiduals()
+
+p1<-co2_tsb %>%
+  ggplot(aes(x = index)) +
+  geom_line(aes(y = co2_ppm)) +
+  geom_line(aes(y = .mean, colour="red"), data = simulation) +
+  labs(title="CO_2 forecast - Linear", y="co_2" ) +
+  guides(colour = "none")
+
+p2<-co2_tsb %>%
+  ggplot(aes(x = index)) +
+  geom_line(aes(y = co2_ppm)) +
+  geom_line(aes(y = .mean, colour="red"), data = simulation.with.bootstrap) +
+  labs(title="CO_2 forecast with Bootstrap - Linear", y="co_2" ) +
+  guides(colour = "none")
+grid.arrange(p1,p2, nrow=2)
+print("Accuracy of trend + season")
+colnames(co2_1998_plus)[1] <- "index"
+accuracy(simulation$.mean, co2_1998_plus$co2_ppm)
+print("Accuracy of trend + season with Bootstrap")
+accuracy(simulation.with.bootstrap$.mean, co2_1998_plus$co2_ppm)
+
+accuracy(simulation, co2_1998_plus,list(winkler = winkler_score), level = 80)
+accuracy(simulation.with.bootstrap, co2_1998_plus, list(winkler = winkler_score), level = 80)
+accuracy(simulation, co2_1998_plus, list(winkler = winkler_score), level = 95)
+accuracy(simulation.with.bootstrap, co2_1998_plus, list(winkler = winkler_score), level = 95)
+tail(simulation$.mean)
+n <- 36
+tail.actual <- tail(co2_1998_plus$co2_ppm, n)
+tail.pred <- tail(simulation$.mean, n)
+print("RMSE of Last 36 months")
+print(sqrt(mean((tail.actual-tail.pred)^2)))
+
+head.actual <- head(co2_1998_plus$co2_ppm, n)
+head.pred <- head(simulation$.mean, n)
+print("RMSE of First 36 months")
+print(sqrt(mean((head.actual-head.pred)^2)))
+
+```
+**Linear Model Explanation**
+
+To begin with let's take a look at the residual of the fitted linear model. A 
+good forecasting method will yield innovation residuals with the following properties:
+
+1) The innovation residuals are uncorrelated. If there are correlations between 
+innovation residuals, then there is information left in the residuals which should 
+be used in computing forecasts.
+
+2) The innovation residuals have zero mean. If they have a mean other than zero, 
+then the forecasts are biased.The innovation residuals also fails to show us the 
+white noise. Thus we anticipate the forecast-ed values to not reflect the full 
+absorption of trend and seasonality.
+
+3) The innovation residuals have constant variance. This is known as “homoscedasticity”.
+
+4) The innovation residuals are normally distributed.
+
+Looking at the ACF, there is a strong auto-correlation between the preset values 
+of the series and the lagged values. So we conclude the residuals are correlated.
+The Innovation mean is close to zero. The innovation residuals have near constant 
+variance. The innovation residuals are normally distributed in the histogram plot.
+
+As the residual still have trend/seasonality left in it, while forecasting, the
+team explored both with **Residual Re-sampling** via bootstrap residuals and without
+boot-straping residuals to explore how well the model behaves. 
+
+As expected the forecast-ed model have a few positives and pitfalls. 
+
+1) The Seasonality is consistently under estimated. This is evident from the height
+of the seasonality smaller than the training data in both boot-strapped and 
+non-boot-strapped forecasts.
+
+2) The RMSE and other error metrics are reasonably small.
+
+3) To evaluate the distributional forecast accuracy our team employed **Winkler Score** 
+test. The Winkler score can be interpreted like an absolute error. For observations 
+that fall within the interval, the Winkler score is simply the length of the interval. 
+So low scores are associated with narrow intervals. However, if the observation 
+falls outside the interval, the penalty applies, with the penalty proportional to 
+how far the observation is outside the interval. A score of 2.6 for 80% confidence
+interval and 3.28 for 95% confidence interval shows the forecast-ed values are 
+not way off.
+
+4) The trend is not captured well. This is evident from the **90.6% increase** in the 
+RMSE values for the last 36 months compared to the first 36 months - 1.18415 vs 
+0.6213753. Thus, the small unobserved trend in the residuals for the initial forecast-ed 
+values create a large effect in the far future forecasts - **the butterfly effect** is the 
+sensitive dependence on initial conditions in which a small change in one state of a 
+deterministic nonlinear system can result in large differences in a later state.
+
+Based on the above observations, **the best linear model consistently under predicts**.
+
+## Task 3b: Compare ARIMA models forecasts against realized CO2
+
+```{r Compare ARIMA Model, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
+set.seed(44)
+colnames(co2_1998_plus)[2] <- "co2_ppm"
+
+fit <- co2_tsb %>% model(ARIMA(co2_ppm ~ 0 + pdq(7,1,8) + PDQ(1,1,1), 
+                               stepwise=FALSE, approximation=FALSE)) 
+simulation <- fit %>% forecast(h = 295)
+simulation.with.bootstrap <- fit %>% forecast(h = 295, times = 50, bootstrap = TRUE)
+
+aug <- fit %>% augment()
+print("Innnovation Residual Mean")
+print(mean(aug$.resid))
+qqnorm(aug$.resid, pch = 1, frame = FALSE, xlab = "Fitted", ylab = "Residual") 
+fit %>% gg_tsresiduals()
+
+p1<-co2_tsb %>%
+  ggplot(aes(x = index)) +
+  geom_line(aes(y = co2_ppm)) +
+  geom_line(aes(y = .mean, colour="red"), data = simulation) +
+  labs(title="CO_2 forecast - Linear", y="co_2" ) +
+  guides(colour = "none")
+
+p2<-co2_tsb %>%
+  ggplot(aes(x = index)) +
+  geom_line(aes(y = co2_ppm)) +
+  geom_line(aes(y = .mean, colour="red"), data = simulation.with.bootstrap) +
+  labs(title="CO_2 forecast with Bootstrap - Linear", y="co_2" ) +
+  guides(colour = "none")
+grid.arrange(p1,p2, nrow=2)
+print("Accuracy of trend + season")
+colnames(co2_1998_plus)[1] <- "index"
+accuracy(simulation$.mean, co2_1998_plus$co2_ppm)
+print("Accuracy of trend + season with Bootstrap")
+accuracy(simulation.with.bootstrap$.mean, co2_1998_plus$co2_ppm)
+
+accuracy(simulation, co2_1998_plus,list(winkler = winkler_score), level = 80)
+accuracy(simulation.with.bootstrap, co2_1998_plus, list(winkler = winkler_score), level = 80)
+accuracy(simulation, co2_1998_plus, list(winkler = winkler_score), level = 95)
+accuracy(simulation.with.bootstrap, co2_1998_plus, list(winkler = winkler_score), level = 95)
+
+n <- 36
+tail.actual <- tail(co2_1998_plus$co2_ppm, n)
+tail.pred <- tail(simulation$.mean, n)
+print("RMSE of Last 36 months")
+print(sqrt(mean((tail.actual-tail.pred)^2)))
+
+head.actual <- head(co2_1998_plus$co2_ppm, n)
+head.pred <- head(simulation$.mean, n)
+print("RMSE of First 36 months")
+print(sqrt(mean((head.actual-head.pred)^2)))
+```
+**ARIMA Model Explanation**
+
+To begin with let's take a look at the residual of the fitted linear model. A 
+good forecasting method will yield the above mentioned innovation residual properties.
+
+ACF strongly reflects white noise. So we conclude the residuals are not correlated.
+The Innovation mean is close to zero, but substantially higher than the linear model. 
+The innovation residuals have near constant variance. The innovation residuals are 
+normally distributed in the histogram plot.
+
+The forecast-ed model is not exhibiting substantial difference to the Linear model.
+
+1) The Seasonality is estimated better than the Linear model. This is evident from the height
+of the seasonality relatively closer to the training data in both boot-strapped and 
+non-boot-strapped forecasts.
+
+2) The RMSE and other error metrics are high. As a matter of fact, all the error metrics
+are higher than the Linear model.
+
+3) To evaluate the distributional forecast accuracy our team employed **Winkler Score** 
+test. A score of 37.3 for 80% confidence interval and 47.13 for 95% confidence interval 
+shows the forecast-ed values are way off.
+
+4) The trend is not captured well. This is evident from the **1200%** increase in the 
+RMSE values for the last 36 months compared to the first 36 months - 16.19685 vs 
+1.187938. Thus, the small unobserved trend in the residuals for the initial forecast-ed 
+values create a large effect in the far future forecasts - **the butterfly effect**.
+
+Based on the above observations, **the ARIMA model consistently under predicts** and
+no better than the linear model predictions.
+
+???Describe how the Keeling Curve evolved from 1997 to the present.???
+
+## Task 4b: Evaluate the performance of 1997 linear and ARIMA models
+
+```{r Evaluate the performance of 1997 linear and ARIMA models, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
+co2_tsb <- co2 %>% as_tsibble()
+colnames(co2_tsb)[2] <- "co2_ppm"
+arima.fit <- co2_tsb %>% model(ARIMA(co2_ppm ~ 0 + pdq(7,1,8) + PDQ(1,1,1),
+                               stepwise=FALSE, approximation=FALSE))
+arima.sim <- forecast(arima.fit, model = arima.fit, h=295)
+tail(arima.sim$.mean)
+
+linear.fit <- co2_tsb %>% model(TSLM(co2_ppm ~ trend() + I(trend()^2) + season()))
+linear.sim <- linear.fit %>% forecast(h = 295)
+tail(linear.sim$.mean)
+
+linear.sim.295 <- linear.fit %>% forecast(h = 295)
+arima.fit.295 <- arima.fit %>% forecast(h = 295)
+all.forecast <- bind_cols(co2_1998_plus, linear.sim.295$.mean, arima.fit.295$.mean)
+
+colnames(all.forecast)[3] <- "linear"
+colnames(all.forecast)[4] <- "arima"
+forecast.resi <- all.forecast %>%
+  mutate(linear.residual = co2_ppm-linear) %>%
+  mutate(arima.residual  = co2_ppm-arima)
+
+ttest.resi <- t.test(forecast.resi$linear.residual, 
+                     forecast.resi$arima.residual, alternative = c("two.sided"))
+print("Residual t-test Result")
+print(ttest.resi)
+
+n <- 36
+tail.data <- tail(forecast.resi, n)
+head.data <- head(forecast.resi, n)
+print("RMSE of Last 36 months - ARIMA")
+print(sqrt(mean((tail.data$arima.residual)^2)))
+print("RMSE of First 36 months - ARIMA")
+print(sqrt(mean((head.data$arima.residual)^2)))
+
+print("RMSE of Last 36 months - Linear")
+print(sqrt(mean((tail.data$linear.residual)^2)))
+print("RMSE of First 36 months - Linear")
+print(sqrt(mean((head.data$linear.residual)^2)))
+
+print("Accuracy of Linear Model")
+accuracy(forecast.resi$linear, co2_1998_plus$co2_ppm)
+print("Accuracy of ARIMA Model")
+accuracy(forecast.resi$arima, co2_1998_plus$co2_ppm)
+
+Box.test(forecast.resi$linear.residual, lag = 1, type = c("Ljung-Box"), fitdf = 0)
+Box.test(forecast.resi$arima.residual, lag = 1, type = c("Ljung-Box"), fitdf = 0)
+```
+**Explanation**
+
+???Explain how the model meets 420ppm???
+
+The forecasting performance of the models are assessed by a test and two metrics.
+
+1) **t-test** and **Box test** - t-test determines whether the means of two groups are equal to each other.
+True difference in means is not equal to 0 for the residuals of Linear and Arima 
+tells us that the models have different means
+ ttest H0 => Mean value of 2 residuals are same
+Ha=> it is not.
+The test shows that the low p-value. mean value of linear residual is lower
+linear prediction seems to do a better job. two residuals are statistically different.
+
+Box test is telling the residuals are not independent
+There is no independence in the residuals.
+
+2) **The butterfly effect** - It is the sensitive dependence on initial conditions 
+in which a small change in one state of a deterministic nonlinear system can result 
+in large differences in a later state. A **90.6% increase** in the 
+RMSE values for the last 36 months compared to the first 36 months - 1.18415 vs 
+0.6213753 of the linear model proves the trend is not fully captured. Thus, 
+the small unobserved trend in the residuals for the initial forecast-ed 
+values create a large effect in the far future forecasts. Also, a **1200%** increase in the 
+RMSE values for the last 36 months compared to the first 36 months - 16.19685 vs 
+1.187938 for the ARIMA model echoes the same.
+
+3) **Error Metrics** - ME, RMSE, MAE, MPE, MAPE: ???
+
+
+```{r 2.5 data, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
+##Seasonally adjust the weekly nOAA data 
+##lagging at 12 for annual seasonal, can change to other number for annual "seasons"
+season_num <- 12
+co2_present$seasonally_adjusted_co2 <- difference(co2_present$CO2_avg, lag=season_num)
+
+##split into seasonally adjusted and nonseasonally adjusted
+SA_co2_present <- co2_present %>% select(time_index, seasonally_adjusted_co2)
+NSA_co2_present <- co2_present %>% select(time_index, CO2_avg)
+
+##split test and training sets
+SA_co2_present_train <- SA_co2_present %>% filter(time_index < yearmonth("2020-08-01"))
+SA_co2_present_test <- SA_co2_present %>% filter(time_index > yearmonth("2020-07-01"))
+
+NSA_co2_present_train <- NSA_co2_present %>% filter(time_index < yearmonth("2020-08-01"))
+NSA_co2_present_test <- NSA_co2_present %>% filter(time_index > yearmonth("2020-07-01"))
+
+
+##fit ARIMA models for SA and forecasts
+
+sa_present_fit_best <- auto.arima(y=SA_co2_present_train$seasonally_adjusted_co2, 
+                                  max.p=12, max.P=12, max.Q=0, max.d=2, max.q = 0,
+                                  max.D=2)
+
+sa_forecast <- forecast(SA_co2_present_train$seasonally_adjusted_co2, 
+                        model=sa_present_fit_best, h=24)
+
+plot(sa_forecast)
+
+
+nsa_present_fit_best <- auto.arima(y=NSA_co2_present_train$CO2_avg, 
+                                   max.p=12, max.P=12, max.Q=0, max.d=2, max.q = 0, max.D=2)
+
+
+
+nsa_forecast <- forecast(NSA_co2_present_train$CO2_avg, model=nsa_present_fit_best, h=24)
+
+plot(nsa_forecast)
+
+##fits
+
+fit_NSA <- NSA_co2_present_train %>% model(TSLM(CO2_avg ~ trend()+season())) %>% forecast(h="2 years")
+fit_SA <- SA_co2_present_train %>% model(TSLM(seasonally_adjusted_co2 ~ trend()+season())) %>% forecast(h="2 years")
+
+
+##accuracies 
+
+accuracy(fit_NSA, NSA_co2_present_test)
+accuracy(fit_SA, SA_co2_present_test)
+
+```
+
+
+## Question 2.5
+
+```{r 2.5 model, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
+##Seasonally adjust the weekly nOAA data 
+##lagging at 12 for annual seasonal, can change to other number for annual "seasons"
+season_num <- 12
+co2_present$seasonally_adjusted_co2 <- difference(co2_present$CO2_avg, lag=season_num)
+
+##split into seasonally adjusted and nonseasonally adjusted
+SA_co2_present <- co2_present %>% select(time_index, seasonally_adjusted_co2)
+NSA_co2_present <- co2_present %>% select(time_index, CO2_avg)
+
+##split test and training sets
+SA_co2_present_train <- SA_co2_present %>% filter(time_index < yearmonth("2020-08-01"))
+SA_co2_present_test <- SA_co2_present %>% filter(time_index > yearmonth("2020-07-01"))
+
+NSA_co2_present_train <- NSA_co2_present %>% filter(time_index < yearmonth("2020-08-01"))
+NSA_co2_present_test <- NSA_co2_present %>% filter(time_index > yearmonth("2020-07-01"))
+
+```
+First, we split the seasonally adjusted and non-seasonally adjusted time series into training and test sets. following, we will find the top ARIMA models by evaluating on AIC, fitting the models both for in sample testing (inclusive of the entire time series) and out of sample testing (fitting only on the training set). 
+
+```{r 2.5 ARIMA, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
+##produce ARIMA models for SA and NSA
+
+seeking_arima <- function(x.ts, maxord, p_start) { 
+  best.aic <- 1e8 ##set a low minimum value to iterate against
+  p_seq = c()
+  d_seq = c()
+  q_seq = c()
+  aic_seq = c()
+  n <- length(x.ts)
+  for (p in p_start:maxord[1])
+    for (d in p_start:maxord[2])
+      for (q in p_start:maxord[3]) {
+        p_seq <- c(p_seq, p)
+        d_seq <- c(d_seq, d)
+        q_seq <- c(q_seq, q)
+        fit <- arima(x.ts, order = c(p,d,q), method='CSS')
+        fit.aic <- -2 * fit$loglik + (log(n) + 1) * length(fit$coef)
+        aic_seq <- c(aic_seq, fit.aic)
+        if (fit.aic < best.aic) {
+          best.aic <- fit.aic
+          best.model <- c(p,d,q)
+        }
+      }
+  df = data.frame(p_seq, d_seq, q_seq, aic_seq)
+  return (df[order(aic_seq),])
+}
+
+##SA
+best.arima.sa.insample <- seeking_arima(SA_co2_present$seasonally_adjusted_co2, maxord = c(12,2,0), 0)
+best.sas.insample <- head(best.arima.sa.insample)
+
+best.arima.sa.outsample <- seeking_arima(SA_co2_present_train$seasonally_adjusted_co2, maxord = c(12,2,0), 0)
+best.sas.outsample <- head(best.arima.sa.outsample)
+
+best.sas.outsample
+best.sas.insample
+##NSA
+best.arima.nsa.insample <- seeking_arima(NSA_co2_present$CO2_avg, maxord = c(12,1,12), 0)
+best.nsas.insample <- head(best.arima.nsa.insample)
+
+best.arima.nsa.outsample <- seeking_arima(NSA_co2_present_train$CO2_avg, maxord = c(12,1,12), 0)
+best.nsas.outsample <- head(best.arima.nsa.outsample)
+```
+
+Following the model fitting, we will evaluate the performance of the in-sample models. 
+
+```{r SA model with best AIC ARIMA, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
+### SA model with best AIC ARIMA
+fit <- SA_co2_present %>% model(ARIMA(seasonally_adjusted_co2 ~ 0 + pdq(best.sas.outsample$p_seq[1],
+                                              best.sas.outsample$d_seq[1],
+                                              best.sas.outsample$q_seq[1]) + PDQ(1,1,1), 
+                             stepwise=FALSE, approximation=FALSE, method='ML')) 
+aug<- fit %>% augment()
+print(mean(aug$.resid))
+qqnorm(aug$.resid, pch = 1, frame = FALSE, xlab = "Fitted", ylab = "Residual") 
+fit %>% gg_tsresiduals()
+
+mse_sa_insample <- (accuracy(aug$.fitted, SA_co2_present$seasonally_adjusted_co2)[2])^2
+```
+
+Using the top model from our AIC criterion, for seasonally adjusted in sample data, we observe a fit of `r mse_sa_insample`. We also observe that the residuals appear akin to a whitenoise pattern in their ts plot, as well as roughly normally distributed in their histogram. However, we observe a statistically significant value at lag 12 and 24 in the ACF plot. 
+
+```{r, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
+### NSA model with best AIC ARIMA
+fit <- NSA_co2_present %>% model(ARIMA(CO2_avg ~ 0 + pdq(best.nsas.insample$p_seq[1],
+                                              best.nsas.insample$d_seq[1],
+                                              best.nsas.insample$q_seq[1]) + PDQ(1,1,1), 
+                             stepwise=FALSE, approximation=FALSE, method='ML')) 
+
+aug<- fit %>% augment()
+print(mean(aug$.resid))
+qqnorm(aug$.resid, pch = 1, frame = FALSE, xlab = "Fitted", ylab = "Residual") 
+fit %>% gg_tsresiduals()
+
+mse_nsa_insample <- (accuracy(aug$.fitted, NSA_co2_present$CO2_avg)[2])^2
+```
+
+Using the top model from our AIC criterion, for seasonally adjusted in sample data, we observe a fit of `r mse_nsa_insample`. We also observe that the residuals appear akin to a whitenoise pattern in their ts plot, as well as roughly normally distributed in their histogram. The ACF plot shows statistically insignificant values for up through 24 lags. 
+
+
+
+Next we will be looking at out of sample performance of our models. 
+
+```{r, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
+##out of sample
+outofsample <- function(p,dd, q, value, len_sample, len_pred) {
+  d <- c()
+  for (i in 1:len_pred) {
+    n <- len_sample + i-1
+    fit <- arima(value[1:n], order = c(p,dd, q), method = "CSS")
+    val <- predict(fit,1)
+    d <- append(d, round(val$pred[1],1))
+  }
+  start <- len_sample+1
+  end <- len_sample + len_pred
+  mean((d-value[start:end])^2)
+}
+
+mse_sa <- c()
+for (i in 1:6) {
+  mse_sa <- c(mse_sa, outofsample(p=best.sas.outsample$p_seq[i], d=best.sas.outsample$d_seq[i], q=best.sas.outsample$q_seq[i], value=NSA_co2_present$CO2_avg, len_sample = 555, len_pred=24))
+}
+best.sas.outsample$mse <- mse_sa
+best.sas.outsample
+
+mse_nsa <- c()
+for (i in 1:6) {
+  mse_nsa <- c(mse_nsa, outofsample(p=best.nsas.outsample$p_seq[i], d=best.sas.outsample$d_seq[i], q=best.sas.outsample$q_seq[i], value=SA_co2_present$seasonally_adjusted_co2, len_sample = 555, len_pred=24))
+}
+best.nsas.outsample$mse <- mse_nsa
+best.nsas.outsample
+```
+
+Evaluating the out of sample performance of the top 6 ARIMA models fit to the seasonally adjusted data, we see that the ARIMA model (12, 1, 0) produces the best out of sample performance, with the lowest mean squared error. This model also produces the lowest AIC. 
+
+Evaluating the out of sample performance of the top 6 ARIMA models fit to the seasonally adjusted data, we see that the ARIMA model (11, 0, 9) produces the best out of sample performance, with the lowest mean squared error. This model produced the third highest AIC, but the difference in AIC score from the top ranked model and the third is relatively small. 
+
+Finally we will fit several polynomial models and evaluate performance. As a first step, we will fit a linear polynomial trend model
+
+```{r mse 2.5, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
+
+## In addition, fit a polynomial time-trend model to the seasonally-adjusted series and compare its performance to that of your ARIMA model.
+
+##
+
+lin_fit <- SA_co2_present_train %>% model(TSLM(seasonally_adjusted_co2 ~ trend()))
+
+report(lin_fit)
+
+lin_fit_forecast <- forecast(lin_fit, h=24)
+
+mse_lin <- (accuracy(lin_fit_forecast$.mean, SA_co2_present_test$seasonally_adjusted_co2)[2]^2)
+
+```
+
+We see statistically significant coefficients at a very low p-value and an r-squared of 0.257, which means that only about a quarter of the variance in the data is explained by the model. The MSE is `r mse_lin` which is higher than the lowest MSE ARIMA out of sample performance of 1.88. 
+
+
+
+```{r polynomial, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
+
+## In addition, fit a polynomial time-trend model to the seasonally-adjusted series and compare its performance to that of your ARIMA model.
+
+##
+
+linlog_fit <- SA_co2_present_train %>% model(TSLM(log(seasonally_adjusted_co2) ~ trend()))
+
+report(linlog_fit)
+
+linlog_fit_forecast <- forecast(linlog_fit, h=24)
+
+mse_loglin <- accuracy(linlog_fit_forecast$.mean, log(SA_co2_present_test$seasonally_adjusted_co2))[2]^2
+
+
+```
+
+We see statistically significant coefficients at a very low p-value and an r-squared of 0.181, which means that only about a fifth of the variance in the data is explained by the model, worse than the linear model. The MSE is `r mse_loglin` which is higher than the lowest MSE ARIMA out of sample performance of 1.88. 
+
+```{r quad, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
+
+## In addition, fit a polynomial time-trend model to the seasonally-adjusted series and compare its performance to that of your ARIMA model.
+
+##
+
+quad_fit <- SA_co2_present_train %>% model(TSLM(seasonally_adjusted_co2 ~ trend() + I(trend()^2)))
+
+report(quad_fit)
+
+quad_fit_forecast <- forecast(quad_fit, h=24)
+
+mse_quad <- accuracy(quad_fit_forecast$.mean, SA_co2_present_test$seasonally_adjusted_co2)[2]^2
+
+```
+
+We see statistically significant coefficients for the quadratic term at a very low p-value and an r-squared of 0.181, which means that only about a fifth of the variance in the data is explained by the model, worse than the linear model. The MSE is `r mse_quad` which is lower than the lowest MSE ARIMA out of sample performance of 1.88, indicating that this model may be more accurate at predicting future values than the ARIMA model. 
+
+## How bad could it get?
+
+```{r 2.6, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
+colnames(NSA_co2_present)[2] <- "co2_ppm"
+fit <- NSA_co2_present %>% model(ARIMA(co2_ppm ~ 0 + pdq(best.sas.outsample$p_seq[1],
+                                              best.sas.outsample$d_seq[1],
+                                              best.sas.outsample$q_seq[1]) + PDQ(1,1,1), 
+                             stepwise=FALSE, approximation=FALSE)) 
+
+pred.data <- fit %>%
+  forecast(h = 1205)
+
+hilo.pred <- pred.data %>%
+  hilo(level = c(80,95)) %>%
+  unpack_hilo("95%") %>%
+  unpack_hilo("80%")
+
+co2_present_lo <- co2_present
+colnames(co2_present_lo)[2] <- "co2_ppm"
+co2_present_lo %>% autoplot(co2_ppm) +
+  autolayer(pred.data, level=95, alpha=0.5) +
+  theme_minimal() +
+  labs(title="Future Forecast - ARIMA Model")
+```
