@@ -164,7 +164,7 @@ The differenced time series appears more like a white noise model.
 Even in the differenced data, we still see statistically significant autocorrelations, which is not indicative of a white noise model. 
 The Ljung-Box test has a very small p value, indicating that we should reject the null hypothesis that the residuals of our time series model are independent. 
 
-## Task 2b: Compare linear model forecasts against realized CO2
+## Compare linear model forecasts against realized CO2
 
 ```{r Compare Linear Model, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
 set.seed(44)
@@ -182,20 +182,15 @@ qqnorm(aug$.resid, pch = 1, frame = FALSE, xlab = "Fitted", ylab = "Residual")
 qqline(aug$.resid)
 fit %>% gg_tsresiduals()
 
-p1<-co2_tsb %>%
-  ggplot(aes(x = index)) +
-  geom_line(aes(y = co2_ppm)) +
-  geom_line(aes(y = .mean, colour="red"), data = simulation) +
-  labs(title="CO_2 forecast - Linear", y="co_2" ) +
-  guides(colour = "none")
+co2_tsb %>% autoplot(co2_ppm) +
+  autolayer(simulation, level=95, alpha=0.5) +
+  theme_classic() +
+  labs(title="CO_2 forecast - Linear")
+co2_tsb %>% autoplot(co2_ppm) +
+  autolayer(simulation.with.bootstrap, level=95, alpha=0.5) +
+  theme_classic() +
+  labs(title="CO_2 forecast with Bootstrap - Linear")
 
-p2<-co2_tsb %>%
-  ggplot(aes(x = index)) +
-  geom_line(aes(y = co2_ppm)) +
-  geom_line(aes(y = .mean, colour="red"), data = simulation.with.bootstrap) +
-  labs(title="CO_2 forecast with Bootstrap - Linear", y="co_2" ) +
-  guides(colour = "none")
-grid.arrange(p1,p2, nrow=2)
 print("Accuracy of trend + season")
 colnames(co2_1998_plus)[1] <- "index"
 accuracy(simulation$.mean, co2_1998_plus$co2_ppm)
@@ -217,7 +212,6 @@ head.actual <- head(co2_1998_plus$co2_ppm, n)
 head.pred <- head(simulation$.mean, n)
 print("RMSE of First 36 months")
 print(sqrt(mean((head.actual-head.pred)^2)))
-
 ```
 **Linear Model Explanation**
 
@@ -272,13 +266,13 @@ deterministic nonlinear system can result in large differences in a later state.
 
 Based on the above observations, **the best linear model consistently under predicts**.
 
-## Task 3b: Compare ARIMA models forecasts against realized CO2
+## Compare ARIMA models forecasts against realized CO2
 
 ```{r Compare ARIMA Model, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
 set.seed(44)
 colnames(co2_1998_plus)[2] <- "co2_ppm"
 
-fit <- co2_tsb %>% model(ARIMA(co2_ppm ~ 0 + pdq(7,1,8) + PDQ(1,1,1), 
+fit <- co2_tsb %>% model(ARIMA(co2_ppm ~ 0 + pdq(6,1,3) + PDQ(1,1,1), 
                                stepwise=FALSE, approximation=FALSE)) 
 simulation <- fit %>% forecast(h = 295)
 simulation.with.bootstrap <- fit %>% forecast(h = 295, times = 50, bootstrap = TRUE)
@@ -289,20 +283,15 @@ print(mean(aug$.resid))
 qqnorm(aug$.resid, pch = 1, frame = FALSE, xlab = "Fitted", ylab = "Residual") 
 fit %>% gg_tsresiduals()
 
-p1<-co2_tsb %>%
-  ggplot(aes(x = index)) +
-  geom_line(aes(y = co2_ppm)) +
-  geom_line(aes(y = .mean, colour="red"), data = simulation) +
-  labs(title="CO_2 forecast - Linear", y="co_2" ) +
-  guides(colour = "none")
+co2_tsb %>% autoplot(co2_ppm) +
+  autolayer(simulation, level=95, alpha=0.5) +
+  theme_classic() +
+  labs(title="CO_2 forecast - SARIMA")
+co2_tsb %>% autoplot(co2_ppm) +
+  autolayer(simulation.with.bootstrap, level=95, alpha=0.5) +
+  theme_classic() +
+  labs(title="CO_2 forecast with Bootstrap - SARIMA")
 
-p2<-co2_tsb %>%
-  ggplot(aes(x = index)) +
-  geom_line(aes(y = co2_ppm)) +
-  geom_line(aes(y = .mean, colour="red"), data = simulation.with.bootstrap) +
-  labs(title="CO_2 forecast with Bootstrap - Linear", y="co_2" ) +
-  guides(colour = "none")
-grid.arrange(p1,p2, nrow=2)
 print("Accuracy of trend + season")
 colnames(co2_1998_plus)[1] <- "index"
 accuracy(simulation$.mean, co2_1998_plus$co2_ppm)
@@ -324,6 +313,8 @@ head.actual <- head(co2_1998_plus$co2_ppm, n)
 head.pred <- head(simulation$.mean, n)
 print("RMSE of First 36 months")
 print(sqrt(mean((head.actual-head.pred)^2)))
+
+
 ```
 **ARIMA Model Explanation**
 
@@ -356,9 +347,12 @@ values create a large effect in the far future forecasts - **the butterfly effec
 Based on the above observations, **the ARIMA model consistently under predicts** and
 no better than the linear model predictions.
 
-???Describe how the Keeling Curve evolved from 1997 to the present.???
+The Keeling curve is linearly increasing year of year till to date. Looking at the
+Error terms The trend and the seasonality are captured reasonably well in the model.
 
-## Task 4b: Evaluate the performance of 1997 linear and ARIMA models
+Describe how the Keeling Curve evolved from 1997 to the present.???
+
+## Evaluate the performance of 1997 linear and ARIMA models
 
 ```{r Evaluate the performance of 1997 linear and ARIMA models, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
 co2_tsb <- co2 %>% as_tsibble()
@@ -371,6 +365,7 @@ tail(arima.sim$.mean)
 linear.fit <- co2_tsb %>% model(TSLM(co2_ppm ~ trend() + I(trend()^2) + season()))
 linear.sim <- linear.fit %>% forecast(h = 295)
 tail(linear.sim$.mean)
+
 
 linear.sim.295 <- linear.fit %>% forecast(h = 295)
 arima.fit.295 <- arima.fit %>% forecast(h = 295)
@@ -410,7 +405,10 @@ Box.test(forecast.resi$arima.residual, lag = 1, type = c("Ljung-Box"), fitdf = 0
 ```
 **Explanation**
 
-???Explain how the model meets 420ppm???
+The Linear model predicts the $co_2$ level to cross 420 ppm on April 2022.
+The SARIMA model predicts the $co_2$ level to cross 420 ppm on ???.
+The real data collected also crossed 420 ppm on April 2022. Our models predicts 
+accurately.
 
 The forecasting performance of the models are assessed by a test and two metrics.
 
@@ -435,8 +433,8 @@ values create a large effect in the far future forecasts. Also, a **1200%** incr
 RMSE values for the last 36 months compared to the first 36 months - 16.19685 vs 
 1.187938 for the ARIMA model echoes the same.
 
-3) **Error Metrics** - ME, RMSE, MAE, MPE, MAPE: ???
-
+3) **Error Metrics** - ME, RMSE, MAE, MPE, MAPE: The error metrics accuracy of the 
+linear model is close to 0 across many error metrics. ???
 
 ```{r 2.5 data, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
 ##Seasonally adjust the weekly nOAA data 
@@ -491,7 +489,7 @@ accuracy(fit_SA, SA_co2_present_test)
 ```
 
 
-## Question 2.5
+## Train best models on present data
 
 ```{r 2.5 model, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
 ##Seasonally adjust the weekly nOAA data 
@@ -699,12 +697,9 @@ fit <- NSA_co2_present %>% model(ARIMA(co2_ppm ~ 0 + pdq(best.sas.outsample$p_se
                                               best.sas.outsample$q_seq[1]) + PDQ(1,1,1), 
                              stepwise=FALSE, approximation=FALSE)) 
 
-pred.data <- fit %>%
-  forecast(h = 1205)
+pred.data <- fit %>% forecast(h = 1205)
 
-hilo.pred <- pred.data %>%
-  hilo(level = c(80,95)) %>%
-  unpack_hilo("95%") %>%
+hilo.pred <- pred.data %>% hilo(level = c(80,95)) %>% unpack_hilo("95%") %>%
   unpack_hilo("80%")
 
 co2_present_lo <- co2_present
@@ -713,4 +708,45 @@ co2_present_lo %>% autoplot(co2_ppm) +
   autolayer(pred.data, level=95, alpha=0.5) +
   theme_minimal() +
   labs(title="Future Forecast - ARIMA Model")
+
+myData <- matrix((1:65),
+                 nrow=13,
+                 ncol=5,)
+colnames(myData) <- c("point estimate", "80-low", "80-high", "95-low", "95-high")
+rownames(myData) <- c("Linear 420 FIRST", "SARIMA 420", "Recent SARIMA 420", 
+                      "Linear 500", "SARIMA 500", "Recent SARIMA 500",
+                      "Linear 420 LAST", "SARIMA 420", "Recent SARIMA 420", 
+                      "Linear 500", "SARIMA 500", "Recent SARIMA 500", "Jan 2122")
+myData[1] <- "Apr 2022"
+myData[14] <- "Mar 2023"
+myData[25] <- "Mar 2022"
+myData[38] <- "Apr 2023"
+myData[50] <- "May 2021"
+myData[8]  <- "Dec 2023"
+myData[20] <- "Nov 2024"
+myData[32] <- "Nov 2023"
+myData[44] <- "Nov 2024"
+myData[56] <- "Oct 2023"
+myData[5]  <- "Mar 2051"
+myData[17] <- "May 2051"
+myData[29] <- "Jan 2051"
+myData[41] <- "Apr 2052"
+myData[53] <- "Mar 2050"
+myData[11] <- "Mar 2051"
+myData[23] <- "Dec 2052"
+myData[35] <- "Nov 2051"
+myData[47] <- "Oct 2053"
+myData[59] <- "Dec 2050"
+myData[13] <- 649
+myData[26] <- 588
+myData[39] <- 710
+myData[52] <- 555
+myData[65] <- 743
+
+print(myData)
 ```
+
+Based on the time innovations to solve $CO_2$ problem and the increase in 
+$CO_2$ levels every year we are 95% confident that the $CO_2$ levels would be in 
+555 - 745 ppm range with a point estimate of 650 ppm.
+
