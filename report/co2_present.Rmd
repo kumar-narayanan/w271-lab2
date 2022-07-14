@@ -80,10 +80,6 @@ co2_present %>% gg_tsdisplay(CO2_avg, plot_type="partial") +
 
 co2_tsb <- co2 %>% as_tsibble()
 colnames(co2_tsb)[2] <- "co2_ppm"
-
-co2_present
-co2_tsb
-
 ```
 
 ``` {r examining seasonality, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
