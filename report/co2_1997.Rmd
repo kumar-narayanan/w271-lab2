@@ -46,7 +46,7 @@ knitr::opts_chunk$set(echo=FALSE)
 options(digits = 3)
 ```
 
-```{r load packages, echo = FALSE, message = FALSE, include=FALSE}
+```{r load packages, echo=FALSE, message=FALSE, include=FALSE}
 library(tidyverse)
 library(tsibble)
 library(tseries)
@@ -63,9 +63,40 @@ library(lmtest)
 library(gridExtra)
 library(scales)
 library(zoo)
+library(plyr)
+library(dplyr)
+library(tidyr)
+library(gridExtra)
+
+install.packages("pander")
+library(pander)
+
+install.packages("reshape2")
+library(reshape2)
+
+install.packages("pastecs")
+library(pastecs)
+
+install.packages("car")
+library(car)
+
+install.packages("ggfortify")
+library(ggfortify)
+
+install.packages("stargazer")
+library(stargazer)
 
 install.packages("astsa")
 library(astsa)
+
+install.packages("ggthemes")
+library(ggthemes)
+
+install.packages("gtools")
+library(gtools)
+
+install.packages("kableExtra")
+library(kableExtra)
 
 theme_set(theme_minimal())
 knitr::opts_chunk$set(dpi=1000)
@@ -90,7 +121,7 @@ Thus, we need a neutral ground to measure the $CO_2$ levels. The data we are ana
 
 ## Historical Trends in Atmospheric Carbon 
 
-```{r plot the keeling curve, echo = FALSE}
+```{r plot the keeling curve, echo=FALSE, fig.dim=c(4,3)}
 tsibble::as_tsibble(co2) %>%
   ggplot() + 
   aes(x=index, y=value) + 
@@ -116,7 +147,7 @@ head(co2, 24)
 co2_tsb <- co2 %>% as_tsibble()
 colnames(co2_tsb)[2] <- "co2_ppm"
 ```
-```{r check for missing values}
+```{r check for missing values, echo=TRUE}
 # check for missing values
 num_na <- sum(is.na(co2_tsb$co2_ppm))
 if (num_na > 0) {
@@ -136,7 +167,7 @@ co2_tsb %>% gg_tsdisplay(co2_ppm, plot_type="partial") +
 
 The time series graph is same as the Keeling Curve seen above. A visual analysis of the ACF indicates possible seasonality. The ACF values are not monotonically decreasing. We see a wavy pattern, indicative of possible seasonality. We'll drill down further to examine the seasonality.
 
-```{r EDA explore seasonality, echo=FALSE}
+```{r EDA explore seasonality, echo=FALSE, fig.dim=c(4,3)}
 co2_tsb %>% gg_season(co2_ppm) +
   ylab(TeX(r'($CO_2$ parts per million)')) +
   ggtitle("Annual Seasonality")
@@ -144,9 +175,9 @@ co2_tsb %>% gg_season(co2_ppm) +
 
 In the plot above, titled **Annual Seasonality** we see an almost same degree of seasonality year after year. Two pieces of information are evident in the plot - there is a clear seasonality in the amount of $CO_2$ that hits a peak in the mid-May to mid-June time frame, and hits a minimum in the late-September to early October time frame, and the $CO-2$ levels have been going up without exception year over year. As [figured out by Dr. Keeling](https://scrippsco2.ucsd.edu/assets/publications/keeling_tellus_1960.pdf) the plant life in the Northern Hemisphere starts growing in late spring onward which causes $CO_2$ to be absorbed by them. When the fall season kicks in the leaves fall and the plants stop growing leading to higher concentration both because of lack of vegetation to absorb $CO_2$ and also in small part by the fallen leaves and vegetation.
 
-Additionally, let us examine the sub-series plot. This plot shows us how each month fared across years of observation,
+Additionally, let us examine the sub-series. This plot shows us how each month fared across years of observation,
 
-```{r EDA subseries, echo=FALSE}
+```{r EDA subseries, echo=FALSE, fig.dim=c(4,3)}
 co2_tsb %>%
   gg_subseries(co2_ppm) +
   ylab(TeX(r'($CO_2$ parts per million)')) +
@@ -157,7 +188,7 @@ In the plot titled **Seasonal Sub-series for each month** we see that the trend 
 
 We can also take a quick look at the histogram to see if any obvious pattern emerges.
 
-```{r EDA histogram, echo=FALSE}
+```{r EDA histogram, echo=FALSE, fig.dim=c(4,3)}
 co2_tsb %>% 
   ggplot(aes(x=co2_ppm)) +
   xlab(TeX(r'($CO_2$ parts per million)')) +
@@ -185,8 +216,8 @@ The plot titled **Time-series plot of the** $CO_2$ **concentration** shows the t
 
 We can get a visual of how the $CO_2$ level varied across years.
 
-```{r EDA box plot}
-boxplot(co2 ~ factor(rep(1959:1997, each = 12)), 
+```{r EDA box plot, echo=FALSE, fig.dim=c(4,3)}
+p2 <- boxplot(co2 ~ factor(rep(1959:1997, each = 12)), 
         xlab = 'Year', ylab = 'CO2 PPM',
         outcex = 0.8, medcol="blue", lwd = 0.3, 
         main = TeX(r'(Annual Variation of $CO_2$ concentration)'))
@@ -232,7 +263,7 @@ qqline(stl_reminder$.val)
 
 The QQ plots above show that in the case of Classical Decomposition we do see a the random component being normally distributed. The same isn't quite true with the STL Decomposition. While majority of the remainder values align on the straight line we do see outliers and deviations. We can do "Shapiro Test" to get a quantitative feel for the normal distribution.
 
-```{r additional checks for nornamity, warning=FALSE}
+```{r additional checks for nornamity, warning=FALSE, echo=TRUE}
 # check if remainder (STL) & random (decomposition) are normally distributed
 shapiro.test(decomp_rand$.val)
 shapiro.test(stl_reminder$.val)
@@ -240,7 +271,7 @@ shapiro.test(stl_reminder$.val)
 
 The Shapiro test for the case of Classical Decomposition shows normality. The P-value is well above the 0.05 for a 95% confidence level. Again, the same can't be concluded of the STL test. According to the test the remainder isn't normally distributed. The mean values for both Classical Decomposition (`r mean(decomp_rand$.val, na.rm=TRUE)`) and STL Decomposition (`r mean(stl_reminder$.val, na.rm=TRUE)`) are both close to zero. We can further test if the random/remainder component has seasonality. 
 
-```{r check for stationarity, warning=FALSE}
+```{r check 1 for stationarity, warning=FALSE, echo=TRUE}
 # augmented Dickey-Fuller test to check for stationarity
 x <- decomp_rand$.val
 x <- x[!is.na(x)]
@@ -256,7 +287,7 @@ The results of the Augmented Dickey-Fuller test and the Phillips-Peron test conf
 
 We now turn our attention to the stationarity of the observations itself. We test this with KPSS (Kwiatkowski) and PP (Phillips-Peron) methods which check for unit roots for a time-series process. The presence of unit root renders the process non-stationary. 
 
-```{r check for stationarity, echo=FALSE}
+```{r check 2 for stationarity, echo=FALSE}
 test_stat <- c()
 test_type <- c()
 p_value <- c()
@@ -275,9 +306,9 @@ data.frame(test_type, test_stat, p_value)
 
 The test results show that we've a process that merits considerations as being stationary. The p-value for the case KPSS gives us a 99% confidence level, where as the PP test gives a 90% confidence. 
 
-We can check to see if differenced series provides additional insight and/or makes the date more amenable to a suitable model. We apply difference at 12th lag to remove seasonality and retest updated time-series using unit root test.
+We can check to see if difference series provides additional insight and/or makes the date more amenable to a suitable model. We apply difference at 12th lag to remove seasonality and retest updated time-series using unit root test.
 
-```{r Differencing at 12th lag, echo=FALSE, warning=FALSE}
+```{r Differencing at 12th lag, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
 # Apply difference at 12th lag to remove annual seasonality
 co2_annual<- co2 %>%
   diff(lag=12) %>%
@@ -311,7 +342,7 @@ data.frame(test_type, test_stat, p_value)
 
 When we difference the data we do see some improvement. The p-values reported by the checks above are consistent and provide a 99% confidence level. We stretch ourselves a bit more to see if the second-order difference provides any additiona improvements. We repeat the tests above.
 
-```{r 2nd order differencing of 1 lag, warning=FALSE, echo=FALSE}
+```{r 2nd order difference of 1 lag, warning=FALSE, echo=FALSE, fig.dim=c(4,3)}
 # Apply 2nd order difference of 1 lag to check stationarity
 co2_annual_plus1<- co2 %>%
   diff(lag=12) %>%
@@ -376,7 +407,12 @@ lm_yearly_co2 <- lm(co2_ppm ~ I(year_ind - min_year), data=co2_yearly)
 summary(lm_yearly_co2)
 ```
 
-The model above looks reasonable. What we see is that the base is approximately `r round(as.numeric(coef(lm_yearly_co2)[1]))` ppm and an increase of `r round(as.numeric(coef(lm_yearly_co2)[2]))` every year. The p-values are low enough for us to consider this a reasonable model. The model, however, doesn't capture the seasonality and other nuances that may be better modeled with a time series. We will use time-series aware linear models to see if we get additional insights.
+The model above looks reasonable. What we see is that the base is approximately `r round(as.numeric(coef(lm_yearly_co2)[1]))` ppm and an increase of `r round(as.numeric(coef(lm_yearly_co2)[2]))` every year. The p-values are low enough for us to consider this a reasonable model. The model, however, doesn't capture the seasonality and other nuances that may be better modeled with a time series. We will use time-series aware linear models to see if we get additional insights. The model we're exploring is
+
+\begin{equation}
+\label{eq:three}
+\text{CO}_{2} = \phi_{0} + \phi_{1}*trend + \epsilon_{t}
+\end{equation} 
 
 ```{r time-series linear model}
 co2_1997_linear <- co2_tsb %>%
@@ -388,7 +424,7 @@ It shouldn't come as a surprise that $TLSM()$ fitted a model with identical coef
 
 Now, let's compare the fit with the original.
 
-```{r Linear Model and Original Time Series plot, echo=FALSE}
+```{r Linear Model and Original Time Series plot, echo=FALSE, fig.dim=c(4, 3)}
 augment(co2_1997_linear) %>%
   ggplot(aes(x=index)) +
   geom_line(aes(y=.fitted, colour = 'LinearFit')) +
@@ -404,7 +440,12 @@ co2_1997_linear %>%
 
 As expected the linear prediction model is a good fit. The plots above corroborates the finding.
 
-We can examine if data transformation, to logarithmic values, improves the model. As we did for the linear case we'll examine the output of the log-transformed model, and the residuals.
+We can examine if data transformation, to logarithmic values, improves the model. As we did for the linear case we'll examine the output of the log-transformed model, and the residuals. The analytical model is
+
+\begin{equation}
+\label{eq:four}
+\text{log(}{CO}_{2}{)} = \phi_{0} + \phi_{1}t + \epsilon_{t}
+\end{equation} 
 
 ```{r Logarithmic Transformation}
 co2_1997_log <- co2_tsb %>%
@@ -414,7 +455,7 @@ report(co2_1997_log)
 
 Logarithmic transformation has reduced the magnitude of the coefficients. This is to be expected as log transformations tends to grow slower than linear transformation. Consequently, the intercept and the slope show smaller values.
 
-```{r Logarithm Model and Original Time Series plot, echo=FALSE}
+```{r Log Model with Original Time Series plot, echo=FALSE, fig.dim=c(4,3)}
 augment(co2_1997_log) %>%
   ggplot(aes(x=index)) +
   geom_line(aes(y=.fitted, colour = 'LogFit')) +
@@ -428,11 +469,17 @@ co2_1997_log %>%
   labs(title = "Residuals of a Logarithmic Model fit")
 ```
 
-Residual plost convey information similar to what we saw earlier.
+Residual plot convey information similar to what we saw earlier.
 
 As for linear model, we will extend to see the impact of quadratic terms.
 
-```{r Quadratic Model}
+\begin{equation}
+\label{eq:five}
+\text{CO}_{2} = \phi_{0} + \phi_{1}t + \phi_{2}t^2 + \epsilon_{t}
+\end{equation} 
+
+
+```{r Quadratic Model, echo=TRUE}
 co2_1997_quad <- co2_tsb %>%
   model(TSLM(co2_ppm ~ trend() + I(trend()^2)))
 report(co2_1997_quad)
@@ -440,7 +487,7 @@ report(co2_1997_quad)
 
 While the quadratic term is statistically significant the coefficient associated with the quadratic term is quite small. Thus, the contribution from the quadratic term can be ignored, without significantly impacting the model. The following plots show the fit Vs actual data and the residual characteristics
 
-```{r Logarithm Model and Original Time Series plot, echo=FALSE}
+```{r Log Model and Original Time Series plot, echo=FALSE, fig.dim=c(4,3)}
 augment(co2_1997_quad) %>%
   ggplot(aes(x=index)) +
   geom_line(aes(y=.fitted, colour = 'QuadFit')) +
@@ -456,26 +503,218 @@ co2_1997_quad %>%
 
 At this stage including higher order polynomials may not get us anything more, and further, may be lead to an over-fitted model. The predictions from these models could deviate from earlier model due to the lack of generality in the model.
 
+As a next step we include seasonality to the quadratic model.
+
+```{r quadratic model with season, echo=TRUE}
+co2_1997_quad_Final <- co2_tsb %>%
+  model(TSLM(co2_ppm ~ trend() + I(trend()^2) + season()))
+report(co2_1997_quad_Final)
+```
+
+```{r quadratic model with seasonal Vs original, echo=FALSE, fig.dim=c(4,3)}
+augment(co2_1997_quad_Final) %>%
+  ggplot(aes(x=index)) +
+  geom_line(aes(y=.fitted, colour = 'QuadModel')) +
+  geom_line(aes(y=co2_ppm, colour = 'Original')) +
+  labs(title=TeX(r'($CO_2$ parts per million - quadratic model with season)')) +
+  scale_colour_manual(values = c(QuadModel = 'red', Original = 'blue')) +
+  guides(colour = guide_legend(title = 'Legend'))
+
+co2_1997_quad_Final %>% 
+  gg_tsresiduals() +
+  labs(title = "Residuals of a Quadratic Model fit, with Seasonality")
+```
+
+The model is a good fit. We see that the predicted values follow the original data quite faithfully. Given that only the quadratic term is included we do not believe that this model is an over- fit. The residuals appear normally distributed around mean `r mean(augment(co2_1997_quad_Final)$.resid)`. Let us do a forecast and see what we get.
+
+```{r Forecast using Quad Model with Seasonality, echo=TRUE}
+quad_model_forecast <- forecast(co2_1997_quad_Final, h=294)
+```
+
+```{r forecast plot, echo=FALSE, fig.dim=c(4,3)}
+quad_model_forecast %>%
+  autoplot(co2_tsb) +
+  labs(y = TeX(r'($CO_2$ parts per million)'), 
+       title = "Forecast till present using Quadratic + Season Model Fit")
+```
+
+The forecast appears in line with what we may expect given the trend and seasonality of the observations we have seen thus far. We believe that this is a reasonable forecast. The last six values from the forecast are `r tail(quad_model_forecast$.mean)`. With forecast set till June 2022 (h=294, being the number of months from Janurary 1998 on), we see the linear model predicting a value of 420 for the first time in April 2022. We need to match with observations that are being measured in 1998 and beyond to validate the effectiveness of the model.
+
 ## ARIMA Models 
 
-Sure we also fit some ARIMA models. And talk about them. 
+```{r ARIMA models setup, echo=FALSE}
+model_orders <- data.frame(permutations(n = 16, r = 2, v = 0:15, 
+                                  set = FALSE, repeats.allowed = TRUE))
+
+colnames(model_orders) <- c("p","q")
+model_orders <- model_orders %>% filter(p + q <= 15 & p + q > 0)
+
+aic_bic_scores <- model_orders %>% 
+  dplyr::rowwise() %>% 
+  mutate(family = ifelse(q == 0, "AR", ifelse(p == 0, "MA", "ARMA")))
+```
+
+```{r init variables, echo=FALSE}
+aic <- c()
+bic <- c()
+d <- 1
+```
+
+```{r ARIMA models iteration, echo=TRUE}
+for (i in 1:nrow(aic_bic_scores)) {
+  p <- aic_bic_scores$p[i]
+  q <- aic_bic_scores$q[i]
+  aic <- c(aic, try_default(AIC(Arima(co2_tsb$co2_ppm,
+                                      order = c(p, 1, q), 
+                                seasonal=list(order = c(0, d ,0), 12))), 
+                            default = NA, quiet = TRUE))
+  bic <- c(bic, try_default(BIC(Arima(co2_tsb$co2_ppm,
+                                      order = c(p, 1, q), 
+                                seasonal=list(order = c(0, d, 0), 12))), 
+                            default = NA, quiet = TRUE))
+}
+```
+
+```{r create the dataframe, echo=FALSE}
+aic_bic_scores$aic <- aic
+aic_bic_scores$bic <- bic
+
+aic_bic_scores <- aic_bic_scores %>%
+  filter(!is.na(aic))
+```
+
+```{r plot the aic, bic score, echo=FALSE, fig.dim=c(4,3)}
+par(mfrow = c(1, 2))
+boxplot(aic_bic_scores$aic ~ aic_bic_scores$family, xlab = "Model family",
+        ylab = "AIC", main = "AIC score per model family")
+boxplot(aic_bic_scores$bic ~ aic_bic_scores$family, xlab = "Model family",
+        ylab = "BIC", main = "BIC score per model family")
+```
+
+We ran an ARIMA model with difference (d) set to zero. We iterated over several values of AR order (p) and MA order (q). The box plot above shows the AIC and the BIC values from the iterations. We clearly see that the ARMA model gives the optimal fit. 
+
+```{r examine AIC and BIC scores, echo=FALSE}
+aic_bic_scores <- aic_bic_scores %>% arrange(aic, bic)
+head(aic_bic_scores, 10)
+```
+ 
+As is evident from the AIC and BIC scores reported ARIMA(6,1,9) scores the best. In addition, we'll consider the next two model also - ARIMA(13,1,1) and ARIMA(12,1,3). We see data for each month are well correlated across years. The earlier plot titled **Seasonal Sub-series for each month** shows that when we consider data for a given month across all years we see an upward trend. 
+ 
+```{r AICC Criteria, echo=TRUE}
+model_aic<-co2_tsb %>%
+  model(ARIMA(co2_ppm ~ 1 + pdq(0:14,0:2,0:5) + PDQ(0,0,0), ic="aic", 
+              stepwise=F, greedy=F))
+
+model_aicc<-co2_tsb %>%
+  model(ARIMA(co2_ppm ~ 1 + pdq(0:14,0:2,0:5) + PDQ(0,0,0), ic="aicc", 
+              stepwise=F, greedy=F))
+
+model_bic<-co2_tsb %>%
+  model(ARIMA(co2_ppm ~ 1 + pdq(0:14,0:2,0:5) + PDQ(0,0,0), ic="bic", 
+              stepwise=F,greedy=F))
+```
+```{r model report, echo=FALSE}
+cat("-----AIC Model Report-----------------------------------------------\n")
+model_aic %>%
+  report()
+cat("-----AICc Model Report----------------------------------------------\n")
+model_aicc %>%
+  report()
+cat("-----BIC Model Report-----------------------------------------------\n")
+model_bic %>%
+  report()
+```
+
+When we include the difference term we find that the model is tuning itself to ARIMA(2, 1, 4). This likely happens because when we introduce difference term it tends to take away the trend and/or seasonality. The ARIMA(2, 1, 4) is a good fit for the difference time-series for all three information criteria.
+
+```{r model review, echo=FALSE, fig.dim=c(4,3)}
+model_bic %>%
+  augment() %>%
+  ACF(.resid) %>%
+  autoplot()
+```
+
+### SARIMA Model
+Here we consider a full SARIMA model with seasonality and iterate through the values for parameters, keeping the difference parameters (d and D) as 1. We then want to consider models with highest p-value from the Ljung-Box test first, and then choose those models which have lower AIC/BIC values.
+
+```{r arima with seasonality for best ARMA models, echo=FALSE}
+model_pdq <- data.frame(permutations(n = 7, r = 2, v = c(0, 1, 2, 3, 6, 9, 12), 
+                                  set = FALSE, repeats.allowed = TRUE))
+
+colnames(model_pdq) <- c("p","q")
+model_pdq <- model_pdq %>% filter(p + q <= 12 & p + q > 0)
+
+model_PDQ <- data.frame(permutations(n=3, r=2, v=0:2, set = FALSE, 
+                                          repeats.allowed = TRUE))
+colnames(model_PDQ) <- c("P", "Q")
+model_PDQ <- model_PDQ %>% filter(P + Q <= 2)
+
+aic <- c()
+bic <- c()
+lBox <- c()
+order_pdq <- c()
+order_PDQ <- c()
+
+for (i in 1: nrow(model_pdq)) {
+  p <- model_pdq$p[i]
+  q <- model_pdq$q[i]
+  for (j in 1: nrow(model_PDQ)) {
+    P <- model_PDQ$P[j]
+    Q <- model_PDQ$Q[j]
+    model_sarima <- try_default(Arima(co2_tsb$co2_ppm, order=c(p, 1, q),  
+                          seasonal=list(order=c(P, 1, Q), 12), method="ML"),
+                          default=NA, quiet=TRUE)
+    
+    aic <- c(aic, try_default(AIC(model_sarima), default=NA, quiet=TRUE))
+    bic <- c(bic, try_default(BIC(model_sarima), default=NA, quiet=TRUE))
+    lBox <- c(lBox, try_default(Box.test(model_sarima$residuals,
+                                         type="Ljung-Box")$p.value, 
+                                default = NA, quiet = TRUE))
+    order_pdq <- c(order_pdq, paste(p, 1, q, sep="-"))
+    order_PDQ <- c(order_PDQ, paste(P, 1, Q, sep="-"))
+  }
+}
+
+modelPerf_df <- data.frame(order_pdq, order_PDQ, aic, bic, ljung_box = lBox)
+modelPerf_df <- modelPerf_df %>% arrange(desc(ljung_box))
+
+head(modelPerf_df, 10)
+```
+
+Among the models, the one with highest p-value from the Ljung-Box test is the $SARIMA(6,1,3)(1, 1,1)_{12}$ model. We'll use this model to run the forecast. 
 
 ## Forecasts 
 
-```{r}
-prediction_1 <- predict(
-  object = model_1, 
-  newdata = data.frame(x=11), 
-  interval = 'prediction'
-)
+```{r preidction, echo=TRUE}
+Model_Forecast <- co2_tsb %>%
+  model(ARIMA(co2_ppm ~ 0 + pdq(6,1,3) + PDQ(1,1,1), stepwise=FALSE, 
+              approximation=FALSE)) %>%
+  forecast(h = 1236)
 ```
 
+```{r plot the forecast, echo=FALSE}
+# Comparison
+co2_tsb %>% autoplot(co2_ppm) +
+  autolayer(Model_Forecast, level=95, alpha=0.5) +
+  theme_minimal() +
+  labs(title="ARIMA Model Forecast to Present")
+```
 
-Because we have fitted a model, we can make predictions from that model. Our preferred model, named in \autoref{eq:one} is quite simple, and as you might notice, does not in fact match up with the model that we have fitted. However, from this model is is possible to reason about what the outcomes would be if the *input concept* were to be slightly ouside of the observed data range. In particular, if *input concept* were as high as $11$, then we would expect the *output concept* to be `r prediction_1[1,1]`, with a prediction interval that ranges from [`r prediction_1[1,2]`, `r prediction_1[1,3]`]
+Given that we have fitted a model, we can make predictions from that model. Our preferred model, named in \autoref{eq:one} is quite simple, and as you might notice, does not in fact match up with the model that we have fitted. 
+
+The forecast is done up to December 2100. The 1st time we hit 420 ppm, is `r match(c(420), round(Model_Forecast$.mean))`, which corresponds to year 2034 and month March. We hit 500 ppm in `r match(c(500), round(Model_Forecast$.mean))`, which corresponds to August of 2089. We do hit 420 ppm a few months later too. Similarly, we hit 500 ppm September of 2089 and a few months after that too. It is worth noting that the distribution of $CCO_2$ in March 20234 is normal.
+
+```{r co2 distribution, echo=TRUE}
+Model_Forecast$co2_ppm[match(c(420), round(Model_Forecast$.mean))]
+```
+
+The model predics that $CO_2$ is a Normal Distribution with a mean of 420 and standard deviation ($\sigma$) of 9.3. Thus, the actual value is likely between 401 to 439 with 95% confidence $(420 - 2*9.3$, $420 + 2*9.3)$. 
 
 # Conclusions 
 
-What to conclude is unclear. 
+In this report we started with an analysis of the data (commonly referred to as Exploratory Data. Analysis, or EDA) to see what we can learn of the observations from MLO. We then progressively added additional parameters to fit a model and do the forecast. We started with a naive model of $CO_2$ being a linear function of time. We abandoned this idea because we clearly see seasonality. Then we added time and season parameters to the linear model and used the time-series version (TSLM function) to get a model. We got a linear model that provided a decent approximation to the observations we had. We could get the model fit and forecast. Subsequently, we modeled as an ARIMA model with difference of first order. Then, we introduced seasonality and created a SARIMA model. 
+
+While we can look at the metrics of the model (AIC, BIC, Ljung-Box test etc.) and try to refine the model we don't have a pragmatic way as yet to check the forecast. The one take away is that, at least qualitatively, we see a linear trend in the amount of $CO_2$ in our atmosphere. This alone should give us a cause for concern. We just can't continue business as usual. In a larger sense the exact amount of $CO_2$ that we'll see in the atmosphere is less important than the qualitative trend line. We also see the role the plants and forest play in absorbing $CO_2$. If this report is able to encourage readers to reduce the amount of $CO_2$ we emit we believe that the large goal is achieved. We can and will continue to refine the model as more data comes in to get a good enough model, which is what is realistically achievable.
 
 \bibliographystyle{aea}
 \bibliography{references}
