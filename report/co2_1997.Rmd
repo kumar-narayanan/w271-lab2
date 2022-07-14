@@ -1,14 +1,6 @@
 ---
-title: "Global $CO_{2}$ Emissions in 1997"
+title: "Present and Future Global $CO_{2}$ Emissions"
 short: "What Keeling missed all these years"
-journal: "AER" # AER, AEJ, PP, JEL
-month: "`r format(Sys.Date(), '%m')`"
-year: "`r format(Sys.Date(), '%Y')`"
-vol: 0
-issue: 0
-keywords:
-  - Replication
-  - Modern Science
 author:
   - name: Finnian Meagher
     firstname: Finnian
@@ -37,7 +29,7 @@ abstract: |
 header-includes: 
   - '\usepackage{graphicx}'
   - '\usepackage{booktabs}'
-output: rticles::aea_article
+output: pdf_document
 ---
 
 ```{r setup, echo=FALSE}
@@ -47,6 +39,10 @@ options(digits = 3)
 ```
 
 ```{r load packages, echo=FALSE, message=FALSE, include=FALSE}
+r = getOption("repos")
+r["CRAN"] = "http://cran.us.r-project.org"
+options(repos = r)
+
 library(tidyverse)
 library(tsibble)
 library(tseries)
