@@ -478,7 +478,7 @@ training and test sets. Then, we will find the top ARIMA models by evaluating on
 fitting the models both for in sample testing (inclusive of the entire time series) 
 and out of sample testing (fitting only on the training set) to find out the best. 
 
-We seek the best ARIMA function across p = 1..12, d = 1 and q = 1..12. The reason to 
+We seek the best ARIMA function across p = 1...12, d = 1 and q = 1...12. The reason to 
 limit d is "Information criteria is not a good guide to select the order of differencing (d)".
 
 ```{r 2.5 ARIMA, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
@@ -530,7 +530,7 @@ best.nsas.outsample
 ```
 
 The above results showcase the top models for each category. Let's first evaluate 
-the performance of the in-sample models. 
+the performance of the top 5 **in-sample models** for other error metrics. 
 
 ```{r SA model with best AIC ARIMA, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
 ### SA model with best AIC ARIMA
@@ -539,115 +539,121 @@ fit <- SA_co2_present %>% model(ARIMA(seasonally_adjusted_co2 ~ 0 + pdq(best.sas
                                               best.sas.insample$q_seq[1]) + PDQ(1,1,1), 
                              stepwise=FALSE, approximation=FALSE, method='ML')) 
 aug<- fit %>% augment()
-print(mean(tail(aug$.resid,567)))
 qqnorm(tail(aug$.resid,567), pch = 1, frame = FALSE, xlab = "Fitted", ylab = "Residual") 
 fit %>% gg_tsresiduals()
 
 mse_sa_insample <- (accuracy(aug$.fitted, SA_co2_present$seasonally_adjusted_co2)[2])^2
-mse_sa_insample
+print(paste("Error Metrics for p=",best.sas.insample$p_seq[1], " d=", best.sas.insample$d_seq[1], " d=", best.sas.insample$q_seq[1]))
+print(paste("Resid Mean is ", mean(tail(aug$.resid,567)) ))
+print(paste("MSE is ", mse_sa_insample))
 fit <- SA_co2_present %>% model(ARIMA(seasonally_adjusted_co2 ~ 0 + pdq(best.sas.insample$p_seq[2],
                                               best.sas.insample$d_seq[2],
                                               best.sas.insample$q_seq[2]) + PDQ(1,1,1), 
                              stepwise=FALSE, approximation=FALSE, method='ML')) 
 aug<- fit %>% augment()
-print(mean(tail(aug$.resid,567)))
-
 mse_sa_insample <- (accuracy(aug$.fitted, SA_co2_present$seasonally_adjusted_co2)[2])^2
-mse_sa_insample
+print(paste("Error Metrics for p=",best.sas.insample$p_seq[2], " d=", best.sas.insample$d_seq[2], " d=", best.sas.insample$q_seq[2]))
+print(paste("Resid Mean is ", mean(tail(aug$.resid,567)) ))
+print(paste("MSE is ", mse_sa_insample))
+
 fit <- SA_co2_present %>% model(ARIMA(seasonally_adjusted_co2 ~ 0 + pdq(best.sas.insample$p_seq[3],
                                               best.sas.insample$d_seq[3],
                                               best.sas.insample$q_seq[3]) + PDQ(1,1,1), 
                              stepwise=FALSE, approximation=FALSE, method='ML')) 
 aug<- fit %>% augment()
-print(mean(tail(aug$.resid,567)))
-
 mse_sa_insample <- (accuracy(aug$.fitted, SA_co2_present$seasonally_adjusted_co2)[2])^2
-mse_sa_insample
+print(paste("Error Metrics for p=",best.sas.insample$p_seq[3], " d=", best.sas.insample$d_seq[3], " d=", best.sas.insample$q_seq[3]))
+print(paste("Resid Mean is ", mean(tail(aug$.resid,567)) ))
+print(paste("MSE is ", mse_sa_insample))
 
 fit <- SA_co2_present %>% model(ARIMA(seasonally_adjusted_co2 ~ 0 + pdq(best.sas.insample$p_seq[4],
                                               best.sas.insample$d_seq[4],
                                               best.sas.insample$q_seq[4]) + PDQ(1,1,1), 
                              stepwise=FALSE, approximation=FALSE, method='ML')) 
 aug<- fit %>% augment()
-print(mean(tail(aug$.resid,567)))
 
 mse_sa_insample <- (accuracy(aug$.fitted, SA_co2_present$seasonally_adjusted_co2)[2])^2
-mse_sa_insample
+print(paste("Error Metrics for p=",best.sas.insample$p_seq[4], " d=", best.sas.insample$d_seq[4], " d=", best.sas.insample$q_seq[4]))
+print(paste("Resid Mean is ", mean(tail(aug$.resid,567)) ))
+print(paste("MSE is ", mse_sa_insample))
 
 fit <- SA_co2_present %>% model(ARIMA(seasonally_adjusted_co2 ~ 0 + pdq(best.sas.insample$p_seq[5],
                                               best.sas.insample$d_seq[5],
                                               best.sas.insample$q_seq[5]) + PDQ(1,1,1), 
                              stepwise=FALSE, approximation=FALSE, method='ML')) 
 aug<- fit %>% augment()
-print(mean(tail(aug$.resid,567)))
 
 mse_sa_insample <- (accuracy(aug$.fitted, SA_co2_present$seasonally_adjusted_co2)[2])^2
-mse_sa_insample
+print(paste("Error Metrics for p=",best.sas.insample$p_seq[5], " d=", best.sas.insample$d_seq[5], " d=", best.sas.insample$q_seq[5]))
+print(paste("Resid Mean is ", mean(tail(aug$.resid,567)) ))
+print(paste("MSE is ", mse_sa_insample))
 ```
 
-Using the top model from our AIC criterion, for seasonally adjusted in sample data, we observe a fit of `r mse_sa_insample`. We also observe that the residuals appear akin to a whitenoise pattern in their ts plot, as well as roughly normally distributed in their histogram. However, we observe a statistically significant value at lag 12 and 24 in the ACF plot. 
+Using the top 5 models from our AIC criterion, for seasonally adjusted in sample data, we observe all the MSE metrics are very close to `r mse_sa_insample`. We also observe that the residuals appear akin to a white noise pattern in their ts plot, as well as roughly normally distributed in their histogram. However, we observe a statistically significant value at lag 12 and 24 in the ACF plot. 
 
 ```{r, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
 ### NSA model with best AIC ARIMA
-NSA_co2_present
-fit <- NSA_co2_present %>% model(ARIMA(CO2_avg ~ 0 + pdq(best.nsas.insample$p_seq[1],
+fit <- NSA_co2_present %>% model(ARIMA(co2_ppm ~ 0 + pdq(best.nsas.insample$p_seq[1],
                                               best.nsas.insample$d_seq[1],
                                               best.nsas.insample$q_seq[1]) + PDQ(1,1,1), 
                              stepwise=FALSE, approximation=FALSE, method='ML')) 
 
 aug<- fit %>% augment()
-print(mean(aug$.resid))
 qqnorm(aug$.resid, pch = 1, frame = FALSE, xlab = "Fitted", ylab = "Residual") 
 fit %>% gg_tsresiduals()
+mse_nsa_insample <- (accuracy(aug$.fitted, NSA_co2_present$co2_ppm)[2])^2
+print(paste("Error Metrics for p=",best.nsas.insample$p_seq[1], " d=", best.nsas.insample$d_seq[1], " d=", best.nsas.insample$q_seq[1]))
+print(paste("Resid Mean is ", mean(aug$.resid)))
+print(paste("MSE is ", mse_nsa_insample))
 
-mse_nsa_insample <- (accuracy(aug$.fitted, NSA_co2_present$CO2_avg)[2])^2
-
-fit <- NSA_co2_present %>% model(ARIMA(CO2_avg ~ 0 + pdq(best.nsas.insample$p_seq[2],
+fit <- NSA_co2_present %>% model(ARIMA(co2_ppm ~ 0 + pdq(best.nsas.insample$p_seq[2],
                                               best.nsas.insample$d_seq[2],
                                               best.nsas.insample$q_seq[2]) + PDQ(1,1,1), 
                              stepwise=FALSE, approximation=FALSE, method='ML')) 
 
 aug<- fit %>% augment()
-print(mean(aug$.resid))
-mse_nsa_insample <- (accuracy(aug$.fitted, NSA_co2_present$CO2_avg)[2])^2
-mse_nsa_insample
+mse_nsa_insample <- (accuracy(aug$.fitted, NSA_co2_present$co2_ppm)[2])^2
+print(paste("Error Metrics for p=",best.nsas.insample$p_seq[2], " d=", best.nsas.insample$d_seq[2], " d=", best.nsas.insample$q_seq[2]))
+print(paste("Resid Mean is ", mean(aug$.resid)))
+print(paste("MSE is ", mse_nsa_insample))
 
-fit <- NSA_co2_present %>% model(ARIMA(CO2_avg ~ 0 + pdq(best.nsas.insample$p_seq[3],
+fit <- NSA_co2_present %>% model(ARIMA(co2_ppm ~ 0 + pdq(best.nsas.insample$p_seq[3],
                                               best.nsas.insample$d_seq[3],
                                               best.nsas.insample$q_seq[3]) + PDQ(1,1,1), 
                              stepwise=FALSE, approximation=FALSE, method='ML')) 
 
 aug<- fit %>% augment()
-print(mean(aug$.resid))
-mse_nsa_insample <- (accuracy(aug$.fitted, NSA_co2_present$CO2_avg)[2])^2
-mse_nsa_insample
+mse_nsa_insample <- (accuracy(aug$.fitted, NSA_co2_present$co2_ppm)[2])^2
+print(paste("Error Metrics for p=",best.nsas.insample$p_seq[3], " d=", best.nsas.insample$d_seq[3], " d=", best.nsas.insample$q_seq[3]))
+print(paste("Resid Mean is ", mean(aug$.resid)))
+print(paste("MSE is ", mse_nsa_insample))
 
-fit <- NSA_co2_present %>% model(ARIMA(CO2_avg ~ 0 + pdq(best.nsas.insample$p_seq[4],
+fit <- NSA_co2_present %>% model(ARIMA(co2_ppm ~ 0 + pdq(best.nsas.insample$p_seq[4],
                                               best.nsas.insample$d_seq[4],
                                               best.nsas.insample$q_seq[4]) + PDQ(1,1,1), 
                              stepwise=FALSE, approximation=FALSE, method='ML')) 
 
 aug<- fit %>% augment()
-print(mean(aug$.resid))
-mse_nsa_insample <- (accuracy(aug$.fitted, NSA_co2_present$CO2_avg)[2])^2
-mse_nsa_insample
+mse_nsa_insample <- (accuracy(aug$.fitted, NSA_co2_present$co2_ppm)[2])^2
+print(paste("Error Metrics for p=",best.nsas.insample$p_seq[4], " d=", best.nsas.insample$d_seq[4], " d=", best.nsas.insample$q_seq[4]))
+print(paste("Resid Mean is ", mean(aug$.resid)))
+print(paste("MSE is ", mse_nsa_insample))
 
-fit <- NSA_co2_present %>% model(ARIMA(CO2_avg ~ 0 + pdq(best.nsas.insample$p_seq[5],
+fit <- NSA_co2_present %>% model(ARIMA(co2_ppm ~ 0 + pdq(best.nsas.insample$p_seq[5],
                                               best.nsas.insample$d_seq[5],
                                               best.nsas.insample$q_seq[5]) + PDQ(1,1,1), 
                              stepwise=FALSE, approximation=FALSE, method='ML')) 
 
 aug<- fit %>% augment()
-print(mean(aug$.resid))
-mse_nsa_insample <- (accuracy(aug$.fitted, NSA_co2_present$CO2_avg)[2])^2
-mse_nsa_insample
+mse_nsa_insample <- (accuracy(aug$.fitted, NSA_co2_present$co2_ppm)[2])^2
+print(paste("Error Metrics for p=",best.nsas.insample$p_seq[5], " d=", best.nsas.insample$d_seq[5], " d=", best.nsas.insample$q_seq[5]))
+print(paste("Resid Mean is ", mean(aug$.resid)))
+print(paste("MSE is ", mse_nsa_insample))
 ```
 
-Using the top model from our AIC criterion, for seasonally adjusted in sample data, we observe a fit of `r mse_nsa_insample`. We also observe that the residuals appear akin to a whitenoise pattern in their ts plot, as well as roughly normally distributed in their histogram. The ACF plot shows statistically insignificant values for up through 24 lags. 
+Using the top 5 models from our AIC criterion, for seasonally adjusted in sample data, we observe a fit of `r mse_nsa_insample` for all the models. We also observe that the residuals appear akin to a white noise pattern in their ts plot, as well as roughly normally distributed in their histogram. The ACF plot shows statistically insignificant values for up through 24 lags. 
 
-
-
-Next we will be looking at out of sample performance of our models. 
+Next we will be evaluating the top 6 **out of sample performance** models for other error metrics. 
 
 ```{r, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
 ##out of sample
@@ -681,36 +687,25 @@ best.nsas.outsample
 
 Evaluating the out of sample performance of the top 6 ARIMA models fit to the seasonally adjusted data, we see that the ARIMA model (12, 1, 0) produces the best out of sample performance, with the lowest mean squared error. This model also produces the lowest AIC. 
 
-Evaluating the out of sample performance of the top 6 ARIMA models fit to the seasonally adjusted data, we see that the ARIMA model (11, 0, 9) produces the best out of sample performance, with the lowest mean squared error. This model produced the third highest AIC, but the difference in AIC score from the top ranked model and the third is relatively small. 
+Evaluating the out of sample performance of the top 6 ARIMA models fit to the non-seasonally adjusted data, we see that the ARIMA model (12, 0, 6) produces the best out of sample performance, with the lowest mean squared error. This model produced the fourth highest AIC, but the difference in AIC score from the top ranked model and the fourth is relatively small. 
+
+## Polynomial Models
 
 Finally we will fit several polynomial models and evaluate performance. As a first step, we will fit a linear polynomial trend model
 
 ```{r mse 2.5, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
-
-## In addition, fit a polynomial time-trend model to the seasonally-adjusted series and compare its performance to that of your ARIMA model.
-
-##
-
 lin_fit <- SA_co2_present_train %>% model(TSLM(seasonally_adjusted_co2 ~ trend()))
-
 report(lin_fit)
-
 lin_fit_forecast <- forecast(lin_fit, h=24)
-
 mse_lin <- (accuracy(lin_fit_forecast$.mean, SA_co2_present_test$seasonally_adjusted_co2)[2]^2)
 
 ```
 
 We see statistically significant coefficients at a very low p-value and an r-squared of 0.257, which means that only about a quarter of the variance in the data is explained by the model. The MSE is `r mse_lin` which is higher than the lowest MSE ARIMA out of sample performance of 1.88. 
 
+## Log Transformed
 
-
-```{r polynomial, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
-
-## In addition, fit a polynomial time-trend model to the seasonally-adjusted series and compare its performance to that of your ARIMA model.
-
-##
-
+```{r log polynomial, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
 linlog_fit <- SA_co2_present_train %>% model(TSLM(log(seasonally_adjusted_co2) ~ trend()))
 
 report(linlog_fit)
@@ -718,20 +713,12 @@ report(linlog_fit)
 linlog_fit_forecast <- forecast(linlog_fit, h=24)
 
 mse_loglin <- accuracy(linlog_fit_forecast$.mean, log(SA_co2_present_test$seasonally_adjusted_co2))[2]^2
-
-
 ```
 
 We see statistically significant coefficients at a very low p-value and an r-squared of 0.181, which means that only about a fifth of the variance in the data is explained by the model, worse than the linear model. The MSE is `r mse_loglin` which is higher than the lowest MSE ARIMA out of sample performance of 1.88. 
 
 ```{r quad, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
-
-## In addition, fit a polynomial time-trend model to the seasonally-adjusted series and compare its performance to that of your ARIMA model.
-
-##
-
 quad_fit <- SA_co2_present_train %>% model(TSLM(seasonally_adjusted_co2 ~ trend() + I(trend()^2)))
-
 report(quad_fit)
 
 quad_fit_forecast <- forecast(quad_fit, h=24)
@@ -740,16 +727,17 @@ mse_quad <- accuracy(quad_fit_forecast$.mean, SA_co2_present_test$seasonally_adj
 
 ```
 
-We see statistically significant coefficients for the quadratic term at a very low p-value and an r-squared of 0.181, which means that only about a fifth of the variance in the data is explained by the model, worse than the linear model. The MSE is `r mse_quad` which is lower than the lowest MSE ARIMA out of sample performance of 1.88, indicating that this model may be more accurate at predicting future values than the ARIMA model. 
+We see statistically significant coefficients for the quadratic term at a very low p-value and an r-squared of 0.279, which means that only about a quarter of the variance in the data is explained by the model, worse than the linear model. The MSE is `r mse_quad` which is lower than the lowest MSE ARIMA out of sample performance of 1.88, indicating that this model may be more accurate at predicting future values than the ARIMA model. 
 
 ## How bad could it get?
 
 ```{r 2.6, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
 colnames(NSA_co2_present)[2] <- "co2_ppm"
-fit <- NSA_co2_present %>% model(ARIMA(co2_ppm ~ 0 + pdq(best.sas.outsample$p_seq[1],
-                                              best.sas.outsample$d_seq[1],
-                                              best.sas.outsample$q_seq[1]) + PDQ(1,1,1), 
-                             stepwise=FALSE, approximation=FALSE)) 
+fit <- NSA_co2_present %>% model(ARIMA(co2_ppm ~ 0 + pdq(best.nsas.insample$p_seq[1],
+                                              best.nsas.insample$d_seq[1],
+                                              best.nsas.insample$q_seq[1]) + PDQ(1,1,1), 
+                             stepwise=FALSE, approximation=FALSE, method='ML')) 
+
 
 pred.data <- fit %>% forecast(h = 1205)
 
@@ -776,31 +764,71 @@ myData[14] <- "Mar 2023"
 myData[27] <- "Mar 2022"
 myData[40] <- "Apr 2023"
 myData[53] <- "May 2021"
-myData[8]  <- "Dec 2023"
-myData[21] <- "Nov 2024"
-myData[34] <- "Nov 2023"
-myData[47] <- "Nov 2024"
-myData[60] <- "Oct 2023"
-myData[5]  <- "Mar 2051"
-myData[18] <- "May 2051"
-myData[31] <- "Jan 2051"
-myData[44] <- "Apr 2052"
-myData[57] <- "Mar 2050"
-myData[11] <- "Mar 2051"
-myData[24] <- "Dec 2052"
-myData[37] <- "Nov 2051"
-myData[50] <- "Oct 2053"
-myData[63] <- "Dec 2050"
-myData[13] <- 649
-myData[26] <- 588
-myData[39] <- 710
-myData[52] <- 555
-myData[65] <- 743
-
+myData[7]  <- "Dec 2023"
+myData[20] <- "Nov 2024"
+myData[33] <- "Nov 2023"
+myData[46] <- "Nov 2024"
+myData[59] <- "Oct 2023"
+myData[4]  <- "Mar 2051"
+myData[17] <- "May 2051"
+myData[30] <- "Jan 2051"
+myData[43] <- "Apr 2052"
+myData[56] <- "Mar 2050"
+myData[10] <- "Mar 2051"
+myData[23] <- "Dec 2052"
+myData[36] <- "Nov 2051"
+myData[49] <- "Oct 2053"
+myData[62] <- "Dec 2050"
+myData[13] <- 639
+myData[26] <- 578
+myData[39] <- 700
+myData[52] <- 546
+myData[65] <- 733
+myData[3]  <- "Jan 2023"
+myData[16] <- "Jan 2023"
+myData[29] <- "Dec 2022"
+myData[42] <- "Jan 2023"
+myData[55] <- "Dec 2022"
+myData[9]  <- "Sep 2024"
+myData[22] <- "Oct 2024"
+myData[35] <- "Aug 2023"
+myData[48] <- "Sep 2025"
+myData[61] <- "Oct 2023"
+myData[6]  <- "Apr 2057"
+myData[19] <- "Feb 2067"
+myData[32] <- "Feb 2052"
+myData[45] <- "Dec 2077"
+myData[58] <- "Apr 2049"
+myData[12]  <- "Jan 2058"
+myData[25] <- "Oct 2069"
+myData[38] <- "Sep 2053"
+myData[51] <- "Oct 2079"
+myData[64] <- "Nov 2050"
+myData[2]  <- "Apr 2029"
+myData[15] <- "NA"
+myData[28] <- "Mar 2016"
+myData[42] <- "NA"
+myData[54] <- "Dec 2013"
+myData[8]  <- "Nov 2031"
+myData[21] <- "NA"
+myData[34] <- "Dec 2016"
+myData[47] <- "NA"
+myData[60] <- "Dec 2013"
+myData[5]  <- "May 2076"
+myData[18] <- "NA"
+myData[31] <- "Feb 2037"
+myData[44] <- "NA"
+myData[57] <- "Apr 2030"
+myData[11]  <- "Sep 2080"
+myData[24] <- "NA"
+myData[37] <- "Nov 2037"
+myData[50] <- "NA"
+myData[63] <- "Dec 2030"
 print(myData)
 ```
 
-Based on the what we saw so far, from innovations and the solutions to the $CO_2$ problem and the increase in 
-$CO_2$ levels every year, we are 95% confident that the $CO_2$ levels would be in 
-555 - 745 ppm range with a point estimate of 650 ppm.
+From what we have seen in the last few decades - the rise in $CO_2$ levels, the 
+innovations that exaggerated those and the innovations that reduced it - and 
+assuming similar trend continues, we are **95% confident** that the $CO_2$ levels would be in 
+**546-733 ppm** range with a point estimate of **639 ppm**. 
 
