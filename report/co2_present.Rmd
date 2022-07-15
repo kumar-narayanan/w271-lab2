@@ -25,7 +25,7 @@ author:
 acknowledgements: | 
   The authors would like to thank their instructors from MIDS 271.
 abstract: | 
- The message from the latest Intergovernmental Panel on Climate Change (IPCC) report released in April 2022 on the topic of climate change mitigation is clear: urgent and drastic action is needed if we are to limit global warming to 1.5°C. Fossil fuel based Bitcoin Mining, electricity usage for cellphone and computer, industrial pollution, water contamination, and others play a critical role in the global rise in temperature. IPCC has been examining these trends for more than sixty years. The incessant use of electric gadgets and the rising attraction towards mining digital currencues enforce us to solve the problems in newer ways like a circular economy, carbon capture and storage and greener cities. This report adds new findings and alarming predictions for the next decade.
+ The message from the latest Intergovernmental Panel on Climate Change (IPCC) report released in April 2022 on the topic of climate change mitigation is clear: urgent and drastic action is needed if we are to limit global warming to 1.5°C. Fossil fuel based Bitcoin Mining, electricity usage for cellphone and computer, industrial pollution, water contamination, and others play a critical role in the global rise in temperature. IPCC has been examining these trends for more than sixty years. The incessant use of electric gadgets and the rising attraction towards mining digital currencies enforce us to solve the problems in newer ways like a circular economy, carbon capture and storage and greener cities. This report adds new findings and alarming predictions for the next century.
 output: pdf_document
 ---
 
@@ -54,11 +54,13 @@ library(gridExtra)
 library(latex2exp)
 ```
 
-## Introduction
+## Present and Future Global $CO_{2}$ Emissions - Introduction
 
 The data set is pulled from the NOAA Global Monitoring Laboratory website for the monthly average CO2 levels in Mauna Loa. Data from March 1958 through April 1974 have been obtained by C.David Keeling of the Scripps Insititution of Oceanography. Weekly CO2 values are constructed from daily mean values. NOAA has "confidence that the CO2 measurements made at the Mauna Loa observatory reflect truth about our global atmosphere," given that the observatory is at the summit of Mauna Loa at an altitude of 3400 meters and can measure air masses that are representative of large areas, the measurements are frequently and rigorously calibrated, and ongoing comparisons are made to ensure data accuracy. 
 The NOAA GML measures the "mole fraction" of CO2 in dry air, the number of CO2 molecules in a given number of molecules of air after the removal of water vapor. This process is done given that the dry mole fraction reflects the addition and removal of the gas given that dry air does not change when air expands upon heating or ascending to a higher altitude where the pressure is lower. 
 The data is missing values for one week in 1954, and that value has been replaced by the average of its surrounding values on each side. Monthly averages are constructed by taking simple averages of values across each month of the time series. 
+
+## Exploration
 
 From plotting the time series of the data, we see a strong upward trend and likely aspects of seasonality given the oscillating pattern of the time series throughout the trend. From the ACF of the CO2, we see high (and statistically significant) correlation for many lags (100 lags shown on the above plot). Significance is maintained through ~250 lags. This high level of autocorrelation is indicative of trended data. 
 Observing the PACF plot, we see no statistically significant values past the first lag. 
@@ -103,12 +105,14 @@ leg.txt <- c("Time-series",
 legend("topleft", legend = leg.txt, lty = c(1, 1, 1), lwd = c(1, 1, 1.5), 
        col = c("red", "blue"), bty = 'n', cex = .8)
 ```
-From the above plots, we observe a strong seasonal trend, persistent across years. 
 
+From the above plots - Annual Seasonality, Seasonal Sub-series for each month, and 
+Time-Series plot of $CO_2$ concentration - we observe a strong seasonal trend in 
+$Co_2$ levels, and the persistent upward trend across the years observed. 
+
+## Classical Additive Decomposition
 
 ``` {r decomposition, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
-##decomposition
-
 co2_decomp <- co2_present %>%
   model(
     classical_decomposition(CO2_avg, type = "additive")
@@ -119,7 +123,8 @@ co2_decomp <- co2_present %>%
 co2_decomp
 
 ```
-Following the observation of strong seasonality, we can decompose the time series and observe the trend of the data as well as the seasonality. 
+Following the observation of strong seasonality, we can decompose the time series 
+and observe the trend of the data as well as the seasonality leaving a near white noise. 
 
 ``` {r examining just the section above 1979, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
 ##examining just the section above 1979
@@ -135,9 +140,12 @@ co2_1998_plus %>% gg_tsdisplay(CO2_avg, plot_type="partial") +
   ggtitle("Time Series, Autocorrelation (acf), Partial Autocorrelation(pacf)")
 
 ```
-Examining just the years after 1979, we see a fluctuation of autocorrelations on the ACF plot, dipping below statistical significant at ~75 lags. The PACF plot shows statistically significant values ocurring for the first two lags and then at additional lags further out. 
-From the linear model of the co2 levels on the time index, we see a highly statistically significant linear relationship between the two variables, as expected from the trends observed in the time series plot and the results of the ACF plot. 
-To examine the detrending data, we will look at the residuals of the trend model. 
+
+Examining just the years after 1998, we see a fluctuation of auto-correlations on the ACF plot, dipping below statistical significant at ~75 lags. The PACF plot shows statistically significant values occurring for the first two lags and then at additional lags further out. 
+From the linear model of the $co_2$ levels on the time index, we see highly statistically significant linear relationship between the two variables, as expected from the trends observed in the time series plot and the results of the ACF plot. 
+To examine the de-trending data, we will look at the residuals of the trend model.
+
+## Residuals
 
 ``` {r detrending the data, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
 # detrending the data
@@ -149,7 +157,11 @@ acf(detrend)
 pacf(detrend)
 ```
 
-Detrending the data we still see the seasonal pattern and somewhat of a quadratic form. We still see highly statistically significant autocorrelation in the ACF plot, and PACF values that remain statistically significant. 
+Even after de-trending the data we still see a seasonal pattern and somewhat of a quadratic form. 
+We still see highly statistically significant autocorrelation in the ACF plot, and PACF values 
+that remain statistically significant. 
+
+## Differencing
 
 ``` {r detrending - differencing, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
 ## detrending - differencing
@@ -161,8 +173,10 @@ pacf(differenced)
 Box.test(differenced, type="Ljung")
 ```
 The differenced time series appears more like a white noise model. 
-Even in the differenced data, we still see statistically significant autocorrelations, which is not indicative of a white noise model. 
-The Ljung-Box test has a very small p value, indicating that we should reject the null hypothesis that the residuals of our time series model are independent. 
+Even in the differenced data, we still see statistically significant auto-correlations, 
+which is not indicative of a white noise model. The Ljung-Box test has a very small p value, 
+indicating that we should reject the null hypothesis that the residuals of our 
+time series model are independent. 
 
 ## Compare linear model forecasts against realized CO2
 
@@ -183,11 +197,11 @@ qqline(aug$.resid)
 fit %>% gg_tsresiduals()
 
 co2_tsb %>% autoplot(co2_ppm) +
-  autolayer(simulation, level=95, alpha=0.5) +
+  autolayer(simulation, level=99, alpha=0.5) +
   theme_classic() +
   labs(title="CO_2 forecast - Linear")
 co2_tsb %>% autoplot(co2_ppm) +
-  autolayer(simulation.with.bootstrap, level=95, alpha=0.5) +
+  autolayer(simulation.with.bootstrap, level=99, alpha=0.5) +
   theme_classic() +
   labs(title="CO_2 forecast with Bootstrap - Linear")
 
@@ -238,7 +252,7 @@ variance. The innovation residuals are normally distributed in the histogram plo
 
 As the residual still have trend/seasonality left in it, while forecasting, the
 team explored both with **Residual Re-sampling** via bootstrap residuals and without
-boot-straping residuals to explore how well the model behaves. 
+boot-strapping residuals to explore how well the model behaves. 
 
 As expected the forecast-ed model have a few positives and pitfalls. 
 
@@ -248,7 +262,7 @@ non-boot-strapped forecasts.
 
 2) The RMSE and other error metrics are reasonably small.
 
-3) To evaluate the distributional forecast accuracy our team employed **Winkler Score** 
+3) To evaluate the distributional forecast accuracy, the team employed **Winkler Score** 
 test. The Winkler score can be interpreted like an absolute error. For observations 
 that fall within the interval, the Winkler score is simply the length of the interval. 
 So low scores are associated with narrow intervals. However, if the observation 
@@ -264,7 +278,8 @@ values create a large effect in the far future forecasts - **the butterfly effec
 sensitive dependence on initial conditions in which a small change in one state of a 
 deterministic nonlinear system can result in large differences in a later state.
 
-Based on the above observations, **the best linear model consistently under predicts**.
+Based on the above observations, **the best linear model predicts reasonably well** over a long period of time.
+The conclusion is based on the 99% confidence interval graphs plotted above.
 
 ## Compare ARIMA models forecasts against realized CO2
 
@@ -272,8 +287,8 @@ Based on the above observations, **the best linear model consistently under pred
 set.seed(44)
 colnames(co2_1998_plus)[2] <- "co2_ppm"
 
-fit <- co2_tsb %>% model(ARIMA(co2_ppm ~ 0 + pdq(6,1,3) + PDQ(1,1,1), 
-                               stepwise=FALSE, approximation=FALSE)) 
+fit <- co2_tsb %>% model(ARIMA(co2_ppm ~ 0 + pdq(6,1,6) + PDQ(2,1,0), 
+                               stepwise=FALSE, approximation=FALSE, method = "ML")) 
 simulation <- fit %>% forecast(h = 295)
 simulation.with.bootstrap <- fit %>% forecast(h = 295, times = 50, bootstrap = TRUE)
 
@@ -292,10 +307,10 @@ co2_tsb %>% autoplot(co2_ppm) +
   theme_classic() +
   labs(title="CO_2 forecast with Bootstrap - SARIMA")
 
-print("Accuracy of trend + season")
+print("Accuracy of SARIMA ")
 colnames(co2_1998_plus)[1] <- "index"
 accuracy(simulation$.mean, co2_1998_plus$co2_ppm)
-print("Accuracy of trend + season with Bootstrap")
+print("Accuracy of SARIMA with Bootstrap")
 accuracy(simulation.with.bootstrap$.mean, co2_1998_plus$co2_ppm)
 
 accuracy(simulation, co2_1998_plus,list(winkler = winkler_score), level = 80)
@@ -326,7 +341,7 @@ The Innovation mean is close to zero, but substantially higher than the linear m
 The innovation residuals have near constant variance. The innovation residuals are 
 normally distributed in the histogram plot.
 
-The forecast-ed model is not exhibiting substantial difference to the Linear model.
+The forecast-ed model is exhibiting substantial difference to the Linear model.
 
 1) The Seasonality is estimated better than the Linear model. This is evident from the height
 of the seasonality relatively closer to the training data in both boot-strapped and 
@@ -336,7 +351,7 @@ non-boot-strapped forecasts.
 are higher than the Linear model.
 
 3) To evaluate the distributional forecast accuracy our team employed **Winkler Score** 
-test. A score of 37.3 for 80% confidence interval and 47.13 for 95% confidence interval 
+test. A score of 29.5 for 80% confidence interval and 45 for 95% confidence interval 
 shows the forecast-ed values are way off.
 
 4) The trend is not captured well. This is evident from the **1200%** increase in the 
@@ -344,28 +359,29 @@ RMSE values for the last 36 months compared to the first 36 months - 16.19685 vs
 1.187938. Thus, the small unobserved trend in the residuals for the initial forecast-ed 
 values create a large effect in the far future forecasts - **the butterfly effect**.
 
+5) Here, the confidence interval of 50 Boot-strapped model illustrate some important characteristics like -
+a) the lower bound stays near flat b) the upper bound way narrower than the model
+without bootstrap.
+
 Based on the above observations, **the ARIMA model consistently under predicts** and
-no better than the linear model predictions.
+predicts worse than the linear model.
 
-The Keeling curve is linearly increasing year of year till to date. Looking at the
-Error terms The trend and the seasonality are captured reasonably well in the model.
-
-Describe how the Keeling Curve evolved from 1997 to the present.???
+The Keeling curve is **linearly** increasing year after year till to date. The 
+trend and the seasonality are repeating year over year.
 
 ## Evaluate the performance of 1997 linear and ARIMA models
 
 ```{r Evaluate the performance of 1997 linear and ARIMA models, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
 co2_tsb <- co2 %>% as_tsibble()
 colnames(co2_tsb)[2] <- "co2_ppm"
-arima.fit <- co2_tsb %>% model(ARIMA(co2_ppm ~ 0 + pdq(7,1,8) + PDQ(1,1,1),
-                               stepwise=FALSE, approximation=FALSE))
-arima.sim <- forecast(arima.fit, model = arima.fit, h=295)
+arima.fit <- co2_tsb %>% model(ARIMA(co2_ppm ~ 0 + pdq(6,1,6) + PDQ(2,1,0), 
+                               stepwise=FALSE, approximation=FALSE, method = "ML")) 
+arima.sim <- forecast(arima.fit, model = arima.fit, h=380)
 tail(arima.sim$.mean)
 
 linear.fit <- co2_tsb %>% model(TSLM(co2_ppm ~ trend() + I(trend()^2) + season()))
 linear.sim <- linear.fit %>% forecast(h = 295)
 tail(linear.sim$.mean)
-
 
 linear.sim.295 <- linear.fit %>% forecast(h = 295)
 arima.fit.295 <- arima.fit %>% forecast(h = 295)
@@ -385,7 +401,7 @@ print(ttest.resi)
 n <- 36
 tail.data <- tail(forecast.resi, n)
 head.data <- head(forecast.resi, n)
-print("RMSE of Last 36 months - ARIMA")
+print("RMSE of Last 36 months - SARIMA")
 print(sqrt(mean((tail.data$arima.residual)^2)))
 print("RMSE of First 36 months - ARIMA")
 print(sqrt(mean((head.data$arima.residual)^2)))
@@ -406,21 +422,18 @@ Box.test(forecast.resi$arima.residual, lag = 1, type = c("Ljung-Box"), fitdf = 0
 **Explanation**
 
 The Linear model predicts the $co_2$ level to cross 420 ppm on April 2022.
-The SARIMA model predicts the $co_2$ level to cross 420 ppm on ???.
-The real data collected also crossed 420 ppm on April 2022. Our models predicts 
-accurately.
+The SARIMA model predicts the $co_2$ level to cross 420 ppm on April 2029.
+The real data collected also crossed 420 ppm on April 2022. Our linear models predicts accurately.
 
 The forecasting performance of the models are assessed by a test and two metrics.
 
 1) **t-test** and **Box test** - t-test determines whether the means of two groups are equal to each other.
-True difference in means is not equal to 0 for the residuals of Linear and Arima 
-tells us that the models have different means
- ttest H0 => Mean value of 2 residuals are same
-Ha=> it is not.
-The test shows that the low p-value. mean value of linear residual is lower
-linear prediction seems to do a better job. two residuals are statistically different.
-
-Box test is telling the residuals are not independent
+"True difference in means is not equal to 0" - from the model result -
+tells us that the linear and sarima residuals have different means. 
+The test points to a statistically significant p-value, <2e-16, thus rejecting H0. 
+The mean value of the linear residual is lower than the sarima residual.
+Thus, linear prediction seems to do a better job. 
+**Box test** is telling the residuals are not independent
 There is no independence in the residuals.
 
 2) **The butterfly effect** - It is the sensitive dependence on initial conditions 
@@ -429,12 +442,17 @@ in large differences in a later state. A **90.6% increase** in the
 RMSE values for the last 36 months compared to the first 36 months - 1.18415 vs 
 0.6213753 of the linear model proves the trend is not fully captured. Thus, 
 the small unobserved trend in the residuals for the initial forecast-ed 
-values create a large effect in the far future forecasts. Also, a **1200%** increase in the 
-RMSE values for the last 36 months compared to the first 36 months - 16.19685 vs 
-1.187938 for the ARIMA model echoes the same.
+values create a large effect in the far future forecasts. Also, a **1100%** increase in the 
+RMSE values for the last 36 months compared to the first 36 months - 11.18 vs 
+1.07 for the SARIMA model echoes the same.
 
 3) **Error Metrics** - ME, RMSE, MAE, MPE, MAPE: The error metrics accuracy of the 
-linear model is close to 0 across many error metrics. ???
+linear model is close to 0 across many error metrics. While the SARIMA is way higher
+than the linear model.
+
+This concludes the evaluation of the models based of 1997 data.
+
+## Train best models on present data
 
 ```{r 2.5 data, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
 ##Seasonally adjust the weekly nOAA data 
@@ -455,21 +473,15 @@ NSA_co2_present_test <- NSA_co2_present %>% filter(time_index > yearmonth("2020-
 
 
 ##fit ARIMA models for SA and forecasts
-
 sa_present_fit_best <- auto.arima(y=SA_co2_present_train$seasonally_adjusted_co2, 
                                   max.p=12, max.P=12, max.Q=0, max.d=2, max.q = 0,
                                   max.D=2)
-
 sa_forecast <- forecast(SA_co2_present_train$seasonally_adjusted_co2, 
                         model=sa_present_fit_best, h=24)
 
 plot(sa_forecast)
-
-
 nsa_present_fit_best <- auto.arima(y=NSA_co2_present_train$CO2_avg, 
                                    max.p=12, max.P=12, max.Q=0, max.d=2, max.q = 0, max.D=2)
-
-
 
 nsa_forecast <- forecast(NSA_co2_present_train$CO2_avg, model=nsa_present_fit_best, h=24)
 
@@ -479,8 +491,6 @@ plot(nsa_forecast)
 
 fit_NSA <- NSA_co2_present_train %>% model(TSLM(CO2_avg ~ trend()+season())) %>% forecast(h="2 years")
 fit_SA <- SA_co2_present_train %>% model(TSLM(seasonally_adjusted_co2 ~ trend()+season())) %>% forecast(h="2 years")
-
-
 ##accuracies 
 
 accuracy(fit_NSA, NSA_co2_present_test)
@@ -488,8 +498,6 @@ accuracy(fit_SA, SA_co2_present_test)
 
 ```
 
-
-## Train best models on present data
 
 ```{r 2.5 model, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
 ##Seasonally adjust the weekly nOAA data 
@@ -509,11 +517,16 @@ NSA_co2_present_train <- NSA_co2_present %>% filter(time_index < yearmonth("2020
 NSA_co2_present_test <- NSA_co2_present %>% filter(time_index > yearmonth("2020-07-01"))
 
 ```
-First, we split the seasonally adjusted and non-seasonally adjusted time series into training and test sets. following, we will find the top ARIMA models by evaluating on AIC, fitting the models both for in sample testing (inclusive of the entire time series) and out of sample testing (fitting only on the training set). 
+
+First, we split the seasonally adjusted and non-seasonally adjusted time series into 
+training and test sets. Then, we will find the top ARIMA models by evaluating on AIC, 
+fitting the models both for in sample testing (inclusive of the entire time series) 
+and out of sample testing (fitting only on the training set). 
+
+
+## Produce ARIMA models for Seasonally Adjusted (SA) and Non-SA
 
 ```{r 2.5 ARIMA, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
-##produce ARIMA models for SA and NSA
-
 seeking_arima <- function(x.ts, maxord, p_start) { 
   best.aic <- 1e8 ##set a low minimum value to iterate against
   p_seq = c()
@@ -713,30 +726,30 @@ myData <- matrix((1:65),
                  nrow=13,
                  ncol=5,)
 colnames(myData) <- c("point estimate", "80-low", "80-high", "95-low", "95-high")
-rownames(myData) <- c("Linear 420 FIRST", "SARIMA 420", "Recent SARIMA 420", 
-                      "Linear 500", "SARIMA 500", "Recent SARIMA 500",
-                      "Linear 420 LAST", "SARIMA 420", "Recent SARIMA 420", 
-                      "Linear 500", "SARIMA 500", "Recent SARIMA 500", "Jan 2122")
+rownames(myData) <- c("Linear 420 FIRST", "SARIMA 420", "NSA SARIMA 420", 
+                      "Linear 500", "SARIMA 500", "NSA SARIMA 500",
+                      "Linear 420 LAST", "SARIMA 420", "NSA SARIMA 420", 
+                      "Linear 500", "SARIMA 500", "NSA SARIMA 500", "Jan 2122")
 myData[1] <- "Apr 2022"
 myData[14] <- "Mar 2023"
-myData[25] <- "Mar 2022"
-myData[38] <- "Apr 2023"
-myData[50] <- "May 2021"
+myData[27] <- "Mar 2022"
+myData[40] <- "Apr 2023"
+myData[53] <- "May 2021"
 myData[8]  <- "Dec 2023"
-myData[20] <- "Nov 2024"
-myData[32] <- "Nov 2023"
-myData[44] <- "Nov 2024"
-myData[56] <- "Oct 2023"
+myData[21] <- "Nov 2024"
+myData[34] <- "Nov 2023"
+myData[47] <- "Nov 2024"
+myData[60] <- "Oct 2023"
 myData[5]  <- "Mar 2051"
-myData[17] <- "May 2051"
-myData[29] <- "Jan 2051"
-myData[41] <- "Apr 2052"
-myData[53] <- "Mar 2050"
+myData[18] <- "May 2051"
+myData[31] <- "Jan 2051"
+myData[44] <- "Apr 2052"
+myData[57] <- "Mar 2050"
 myData[11] <- "Mar 2051"
-myData[23] <- "Dec 2052"
-myData[35] <- "Nov 2051"
-myData[47] <- "Oct 2053"
-myData[59] <- "Dec 2050"
+myData[24] <- "Dec 2052"
+myData[37] <- "Nov 2051"
+myData[50] <- "Oct 2053"
+myData[63] <- "Dec 2050"
 myData[13] <- 649
 myData[26] <- 588
 myData[39] <- 710
@@ -746,7 +759,7 @@ myData[65] <- 743
 print(myData)
 ```
 
-Based on the time innovations to solve $CO_2$ problem and the increase in 
-$CO_2$ levels every year we are 95% confident that the $CO_2$ levels would be in 
+Based on the what we saw so far, from innovations and the solutions to the $CO_2$ problem and the increase in 
+$CO_2$ levels every year, we are 95% confident that the $CO_2$ levels would be in 
 555 - 745 ppm range with a point estimate of 650 ppm.
 
