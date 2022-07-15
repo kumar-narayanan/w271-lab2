@@ -755,10 +755,11 @@ myData <- matrix((1:65),
                  nrow=13,
                  ncol=5,)
 colnames(myData) <- c("point estimate", "80-low", "80-high", "95-low", "95-high")
-rownames(myData) <- c("Linear 420 FIRST", "SARIMA 420", "NSA SARIMA 420", 
-                      "Linear 500", "SARIMA 500", "NSA SARIMA 500",
-                      "Linear 420 LAST", "SARIMA 420", "NSA SARIMA 420", 
-                      "Linear 500", "SARIMA 500", "NSA SARIMA 500", "Jan 2122")
+rownames(myData) <- c("Linear 420 FIRST CROSS", "SARIMA 420 FIRST CROSS", "NSA ARIMA 420 FIRST CROSS", 
+                      "Linear 500 FIRST CROSS", "SARIMA 500 FIRST CROSS", "NSA ARIMA 500 FIRST CROSS",
+                      "Linear 420 LAST CROSS", "SARIMA 420 LAST CROSS", "NSA ARIMA 420 LAST CROSS", 
+                      "Linear 500 LAST CROSS", "SARIMA 500 LAST CROSS", "NSA ARIMA 500 LAST CROSS", 
+                      "Jan 2122")
 myData[1] <- "Apr 2022"
 myData[14] <- "Mar 2023"
 myData[27] <- "Mar 2022"
@@ -807,7 +808,7 @@ myData[64] <- "Nov 2050"
 myData[2]  <- "Apr 2029"
 myData[15] <- "NA"
 myData[28] <- "Mar 2016"
-myData[42] <- "NA"
+myData[41] <- "NA"
 myData[54] <- "Dec 2013"
 myData[8]  <- "Nov 2031"
 myData[21] <- "NA"
@@ -826,6 +827,12 @@ myData[50] <- "NA"
 myData[63] <- "Dec 2030"
 print(myData)
 ```
+
+The columns in the above table are classified as point estimate, 80% low and high confidence, and
+95% low and high confidence. The first 6 rows are segmented as when the 420/500 ppm
+is crossed first and the last 6 rows reflects when it crosses the respective ppm levels last.
+Three models are used 1) Linear 2) SARIMA 3) NSA ARIMA.
+The values reflect the time the respective models crosses the threshold.
 
 From what we have seen in the last few decades - the rise in $CO_2$ levels, the 
 innovations that exaggerated those and the innovations that reduced it - and 
