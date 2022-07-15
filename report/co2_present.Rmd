@@ -513,9 +513,9 @@ best.sas.insample <- head(best.arima.sa.insample)
 
 best.arima.sa.outsample <- seeking_arima(SA_co2_present_train$seasonally_adjusted_co2, maxord = c(12,2,0), 0)
 best.sas.outsample <- head(best.arima.sa.outsample)
-print("BEST Seasonlly Adjusted ARIMA - in sample")
+print("Top Seasonlly Adjusted ARIMA - in sample")
 best.sas.insample
-print("BEST Seasonlly Adjusted ARIMA - (psuedo) out of sample")
+print("Top Seasonlly Adjusted ARIMA - (psuedo) out of sample")
 best.sas.outsample
 ##NSA
 best.arima.nsa.insample <- seeking_arima(NSA_co2_present$CO2_avg, maxord = c(12,1,12), 0)
@@ -523,23 +523,70 @@ best.nsas.insample <- head(best.arima.nsa.insample)
 
 best.arima.nsa.outsample <- seeking_arima(NSA_co2_present_train$CO2_avg, maxord = c(12,1,12), 0)
 best.nsas.outsample <- head(best.arima.nsa.outsample)
-print("BEST Non-Seasonlly Adjusted ARIMA - in sample")
+print("Top Non-Seasonlly Adjusted ARIMA - in sample")
 best.nsas.insample
-print("BEST Non-Seasonlly Adjusted ARIMA - (psuedo) out of sample")
+print("Top Non-Seasonlly Adjusted ARIMA - (psuedo) out of sample")
 best.nsas.outsample
 ```
 
-Following the model fitting, we will evaluate the performance of the in-sample models. 
+The above results showcase the top models for each category. Let's first evaluate 
+the performance of the in-sample models. 
 
 ```{r SA model with best AIC ARIMA, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
 ### SA model with best AIC ARIMA
-fit <- SA_co2_present %>% model(ARIMA(seasonally_adjusted_co2 ~ 0 + pdq(best.sas.outsample$p_seq[1],
-                                              best.sas.outsample$d_seq[1],
-                                              best.sas.outsample$q_seq[1]) + PDQ(1,1,1), 
+fit <- SA_co2_present %>% model(ARIMA(seasonally_adjusted_co2 ~ 0 + pdq(best.sas.insample$p_seq[1],
+                                              best.sas.insample$d_seq[1],
+                                              best.sas.insample$q_seq[1]) + PDQ(1,1,1), 
                              stepwise=FALSE, approximation=FALSE, method='ML')) 
 aug<- fit %>% augment()
-print(mean(aug$.resid))
-qqnorm(aug$.resid, pch = 1, frame = FALSE, xlab = "Fitted", ylab = "Residual") 
+print(mean(tail(aug$.resid,567)))
+qqnorm(tail(aug$.resid,567), pch = 1, frame = FALSE, xlab = "Fitted", ylab = "Residual") 
+fit %>% gg_tsresiduals()
+
+mse_sa_insample <- (accuracy(aug$.fitted, SA_co2_present$seasonally_adjusted_co2)[2])^2
+
+fit <- SA_co2_present %>% model(ARIMA(seasonally_adjusted_co2 ~ 0 + pdq(best.sas.insample$p_seq[2],
+                                              best.sas.insample$d_seq[2],
+                                              best.sas.insample$q_seq[2]) + PDQ(1,1,1), 
+                             stepwise=FALSE, approximation=FALSE, method='ML')) 
+aug<- fit %>% augment()
+print(mean(tail(aug$.resid,567)))
+qqnorm(tail(aug$.resid,567), pch = 1, frame = FALSE, xlab = "Fitted", ylab = "Residual") 
+fit %>% gg_tsresiduals()
+
+mse_sa_insample <- (accuracy(aug$.fitted, SA_co2_present$seasonally_adjusted_co2)[2])^2
+
+fit <- SA_co2_present %>% model(ARIMA(seasonally_adjusted_co2 ~ 0 + pdq(best.sas.insample$p_seq[3],
+                                              best.sas.insample$d_seq[3],
+                                              best.sas.insample$q_seq[3]) + PDQ(1,1,1), 
+                             stepwise=FALSE, approximation=FALSE, method='ML')) 
+aug<- fit %>% augment()
+print(mean(tail(aug$.resid,567)))
+qqnorm(tail(aug$.resid,567), pch = 1, frame = FALSE, xlab = "Fitted", ylab = "Residual") 
+fit %>% gg_tsresiduals()
+
+mse_sa_insample <- (accuracy(aug$.fitted, SA_co2_present$seasonally_adjusted_co2)[2])^2
+
+
+fit <- SA_co2_present %>% model(ARIMA(seasonally_adjusted_co2 ~ 0 + pdq(best.sas.insample$p_seq[4],
+                                              best.sas.insample$d_seq[4],
+                                              best.sas.insample$q_seq[4]) + PDQ(1,1,1), 
+                             stepwise=FALSE, approximation=FALSE, method='ML')) 
+aug<- fit %>% augment()
+print(mean(tail(aug$.resid,567)))
+qqnorm(tail(aug$.resid,567), pch = 1, frame = FALSE, xlab = "Fitted", ylab = "Residual") 
+fit %>% gg_tsresiduals()
+
+mse_sa_insample <- (accuracy(aug$.fitted, SA_co2_present$seasonally_adjusted_co2)[2])^2
+
+
+fit <- SA_co2_present %>% model(ARIMA(seasonally_adjusted_co2 ~ 0 + pdq(best.sas.insample$p_seq[5],
+                                              best.sas.insample$d_seq[5],
+                                              best.sas.insample$q_seq[5]) + PDQ(1,1,1), 
+                             stepwise=FALSE, approximation=FALSE, method='ML')) 
+aug<- fit %>% augment()
+print(mean(tail(aug$.resid,567)))
+qqnorm(tail(aug$.resid,567), pch = 1, frame = FALSE, xlab = "Fitted", ylab = "Residual") 
 fit %>% gg_tsresiduals()
 
 mse_sa_insample <- (accuracy(aug$.fitted, SA_co2_present$seasonally_adjusted_co2)[2])^2
