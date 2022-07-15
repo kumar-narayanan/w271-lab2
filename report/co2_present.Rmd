@@ -454,51 +454,6 @@ This concludes the evaluation of the models based of 1997 data.
 
 ## Train best models on present data
 
-```{r 2.5 data, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
-##Seasonally adjust the weekly nOAA data 
-##lagging at 12 for annual seasonal, can change to other number for annual "seasons"
-season_num <- 12
-co2_present$seasonally_adjusted_co2 <- difference(co2_present$CO2_avg, lag=season_num)
-
-##split into seasonally adjusted and nonseasonally adjusted
-SA_co2_present <- co2_present %>% select(time_index, seasonally_adjusted_co2)
-NSA_co2_present <- co2_present %>% select(time_index, CO2_avg)
-
-##split test and training sets
-SA_co2_present_train <- SA_co2_present %>% filter(time_index < yearmonth("2020-08-01"))
-SA_co2_present_test <- SA_co2_present %>% filter(time_index > yearmonth("2020-07-01"))
-
-NSA_co2_present_train <- NSA_co2_present %>% filter(time_index < yearmonth("2020-08-01"))
-NSA_co2_present_test <- NSA_co2_present %>% filter(time_index > yearmonth("2020-07-01"))
-
-
-##fit ARIMA models for SA and forecasts
-sa_present_fit_best <- auto.arima(y=SA_co2_present_train$seasonally_adjusted_co2, 
-                                  max.p=12, max.P=12, max.Q=0, max.d=2, max.q = 0,
-                                  max.D=2)
-sa_forecast <- forecast(SA_co2_present_train$seasonally_adjusted_co2, 
-                        model=sa_present_fit_best, h=24)
-
-plot(sa_forecast)
-nsa_present_fit_best <- auto.arima(y=NSA_co2_present_train$CO2_avg, 
-                                   max.p=12, max.P=12, max.Q=0, max.d=2, max.q = 0, max.D=2)
-
-nsa_forecast <- forecast(NSA_co2_present_train$CO2_avg, model=nsa_present_fit_best, h=24)
-
-plot(nsa_forecast)
-
-##fits
-
-fit_NSA <- NSA_co2_present_train %>% model(TSLM(CO2_avg ~ trend()+season())) %>% forecast(h="2 years")
-fit_SA <- SA_co2_present_train %>% model(TSLM(seasonally_adjusted_co2 ~ trend()+season())) %>% forecast(h="2 years")
-##accuracies 
-
-accuracy(fit_NSA, NSA_co2_present_test)
-accuracy(fit_SA, SA_co2_present_test)
-
-```
-
-
 ```{r 2.5 model, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
 ##Seasonally adjust the weekly nOAA data 
 ##lagging at 12 for annual seasonal, can change to other number for annual "seasons"
@@ -515,16 +470,17 @@ SA_co2_present_test <- SA_co2_present %>% filter(time_index > yearmonth("2020-07
 
 NSA_co2_present_train <- NSA_co2_present %>% filter(time_index < yearmonth("2020-08-01"))
 NSA_co2_present_test <- NSA_co2_present %>% filter(time_index > yearmonth("2020-07-01"))
-
 ```
+
 
 First, we split the seasonally adjusted and non-seasonally adjusted time series into 
 training and test sets. Then, we will find the top ARIMA models by evaluating on AIC, 
 fitting the models both for in sample testing (inclusive of the entire time series) 
-and out of sample testing (fitting only on the training set). 
+and out of sample testing (fitting only on the training set) to find out the best. 
 
 
-## Produce ARIMA models for Seasonally Adjusted (SA) and Non-SA
+We seek the best ARIMA function across p = 1..12, d = 1 and q = 1..12. The reason to 
+limit d is "Information criteria is not a good guide to select the order of differencing (d)".
 
 ```{r 2.5 ARIMA, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
 seeking_arima <- function(x.ts, maxord, p_start) { 
@@ -558,15 +514,20 @@ best.sas.insample <- head(best.arima.sa.insample)
 
 best.arima.sa.outsample <- seeking_arima(SA_co2_present_train$seasonally_adjusted_co2, maxord = c(12,2,0), 0)
 best.sas.outsample <- head(best.arima.sa.outsample)
-
-best.sas.outsample
+print("BEST Seasonlly Adjusted ARIMA - in sample")
 best.sas.insample
+print("BEST Seasonlly Adjusted ARIMA - (psuedo) out of sample")
+best.sas.outsample
 ##NSA
 best.arima.nsa.insample <- seeking_arima(NSA_co2_present$CO2_avg, maxord = c(12,1,12), 0)
 best.nsas.insample <- head(best.arima.nsa.insample)
 
 best.arima.nsa.outsample <- seeking_arima(NSA_co2_present_train$CO2_avg, maxord = c(12,1,12), 0)
 best.nsas.outsample <- head(best.arima.nsa.outsample)
+print("BEST Non-Seasonlly Adjusted ARIMA - in sample")
+best.nsas.insample
+print("BEST Non-Seasonlly Adjusted ARIMA - (psuedo) out of sample")
+best.nsas.outsample
 ```
 
 Following the model fitting, we will evaluate the performance of the in-sample models. 
