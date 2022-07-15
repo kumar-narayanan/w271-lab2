@@ -478,7 +478,6 @@ training and test sets. Then, we will find the top ARIMA models by evaluating on
 fitting the models both for in sample testing (inclusive of the entire time series) 
 and out of sample testing (fitting only on the training set) to find out the best. 
 
-
 We seek the best ARIMA function across p = 1..12, d = 1 and q = 1..12. The reason to 
 limit d is "Information criteria is not a good guide to select the order of differencing (d)".
 
