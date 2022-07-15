@@ -544,29 +544,25 @@ qqnorm(tail(aug$.resid,567), pch = 1, frame = FALSE, xlab = "Fitted", ylab = "Re
 fit %>% gg_tsresiduals()
 
 mse_sa_insample <- (accuracy(aug$.fitted, SA_co2_present$seasonally_adjusted_co2)[2])^2
-
+mse_sa_insample
 fit <- SA_co2_present %>% model(ARIMA(seasonally_adjusted_co2 ~ 0 + pdq(best.sas.insample$p_seq[2],
                                               best.sas.insample$d_seq[2],
                                               best.sas.insample$q_seq[2]) + PDQ(1,1,1), 
                              stepwise=FALSE, approximation=FALSE, method='ML')) 
 aug<- fit %>% augment()
 print(mean(tail(aug$.resid,567)))
-qqnorm(tail(aug$.resid,567), pch = 1, frame = FALSE, xlab = "Fitted", ylab = "Residual") 
-fit %>% gg_tsresiduals()
 
 mse_sa_insample <- (accuracy(aug$.fitted, SA_co2_present$seasonally_adjusted_co2)[2])^2
-
+mse_sa_insample
 fit <- SA_co2_present %>% model(ARIMA(seasonally_adjusted_co2 ~ 0 + pdq(best.sas.insample$p_seq[3],
                                               best.sas.insample$d_seq[3],
                                               best.sas.insample$q_seq[3]) + PDQ(1,1,1), 
                              stepwise=FALSE, approximation=FALSE, method='ML')) 
 aug<- fit %>% augment()
 print(mean(tail(aug$.resid,567)))
-qqnorm(tail(aug$.resid,567), pch = 1, frame = FALSE, xlab = "Fitted", ylab = "Residual") 
-fit %>% gg_tsresiduals()
 
 mse_sa_insample <- (accuracy(aug$.fitted, SA_co2_present$seasonally_adjusted_co2)[2])^2
-
+mse_sa_insample
 
 fit <- SA_co2_present %>% model(ARIMA(seasonally_adjusted_co2 ~ 0 + pdq(best.sas.insample$p_seq[4],
                                               best.sas.insample$d_seq[4],
@@ -574,11 +570,9 @@ fit <- SA_co2_present %>% model(ARIMA(seasonally_adjusted_co2 ~ 0 + pdq(best.sas
                              stepwise=FALSE, approximation=FALSE, method='ML')) 
 aug<- fit %>% augment()
 print(mean(tail(aug$.resid,567)))
-qqnorm(tail(aug$.resid,567), pch = 1, frame = FALSE, xlab = "Fitted", ylab = "Residual") 
-fit %>% gg_tsresiduals()
 
 mse_sa_insample <- (accuracy(aug$.fitted, SA_co2_present$seasonally_adjusted_co2)[2])^2
-
+mse_sa_insample
 
 fit <- SA_co2_present %>% model(ARIMA(seasonally_adjusted_co2 ~ 0 + pdq(best.sas.insample$p_seq[5],
                                               best.sas.insample$d_seq[5],
@@ -586,16 +580,16 @@ fit <- SA_co2_present %>% model(ARIMA(seasonally_adjusted_co2 ~ 0 + pdq(best.sas
                              stepwise=FALSE, approximation=FALSE, method='ML')) 
 aug<- fit %>% augment()
 print(mean(tail(aug$.resid,567)))
-qqnorm(tail(aug$.resid,567), pch = 1, frame = FALSE, xlab = "Fitted", ylab = "Residual") 
-fit %>% gg_tsresiduals()
 
 mse_sa_insample <- (accuracy(aug$.fitted, SA_co2_present$seasonally_adjusted_co2)[2])^2
+mse_sa_insample
 ```
 
 Using the top model from our AIC criterion, for seasonally adjusted in sample data, we observe a fit of `r mse_sa_insample`. We also observe that the residuals appear akin to a whitenoise pattern in their ts plot, as well as roughly normally distributed in their histogram. However, we observe a statistically significant value at lag 12 and 24 in the ACF plot. 
 
 ```{r, echo=FALSE, warning=FALSE, fig.dim=c(4,3)}
 ### NSA model with best AIC ARIMA
+NSA_co2_present
 fit <- NSA_co2_present %>% model(ARIMA(CO2_avg ~ 0 + pdq(best.nsas.insample$p_seq[1],
                                               best.nsas.insample$d_seq[1],
                                               best.nsas.insample$q_seq[1]) + PDQ(1,1,1), 
@@ -607,6 +601,46 @@ qqnorm(aug$.resid, pch = 1, frame = FALSE, xlab = "Fitted", ylab = "Residual")
 fit %>% gg_tsresiduals()
 
 mse_nsa_insample <- (accuracy(aug$.fitted, NSA_co2_present$CO2_avg)[2])^2
+
+fit <- NSA_co2_present %>% model(ARIMA(CO2_avg ~ 0 + pdq(best.nsas.insample$p_seq[2],
+                                              best.nsas.insample$d_seq[2],
+                                              best.nsas.insample$q_seq[2]) + PDQ(1,1,1), 
+                             stepwise=FALSE, approximation=FALSE, method='ML')) 
+
+aug<- fit %>% augment()
+print(mean(aug$.resid))
+mse_nsa_insample <- (accuracy(aug$.fitted, NSA_co2_present$CO2_avg)[2])^2
+mse_nsa_insample
+
+fit <- NSA_co2_present %>% model(ARIMA(CO2_avg ~ 0 + pdq(best.nsas.insample$p_seq[3],
+                                              best.nsas.insample$d_seq[3],
+                                              best.nsas.insample$q_seq[3]) + PDQ(1,1,1), 
+                             stepwise=FALSE, approximation=FALSE, method='ML')) 
+
+aug<- fit %>% augment()
+print(mean(aug$.resid))
+mse_nsa_insample <- (accuracy(aug$.fitted, NSA_co2_present$CO2_avg)[2])^2
+mse_nsa_insample
+
+fit <- NSA_co2_present %>% model(ARIMA(CO2_avg ~ 0 + pdq(best.nsas.insample$p_seq[4],
+                                              best.nsas.insample$d_seq[4],
+                                              best.nsas.insample$q_seq[4]) + PDQ(1,1,1), 
+                             stepwise=FALSE, approximation=FALSE, method='ML')) 
+
+aug<- fit %>% augment()
+print(mean(aug$.resid))
+mse_nsa_insample <- (accuracy(aug$.fitted, NSA_co2_present$CO2_avg)[2])^2
+mse_nsa_insample
+
+fit <- NSA_co2_present %>% model(ARIMA(CO2_avg ~ 0 + pdq(best.nsas.insample$p_seq[5],
+                                              best.nsas.insample$d_seq[5],
+                                              best.nsas.insample$q_seq[5]) + PDQ(1,1,1), 
+                             stepwise=FALSE, approximation=FALSE, method='ML')) 
+
+aug<- fit %>% augment()
+print(mean(aug$.resid))
+mse_nsa_insample <- (accuracy(aug$.fitted, NSA_co2_present$CO2_avg)[2])^2
+mse_nsa_insample
 ```
 
 Using the top model from our AIC criterion, for seasonally adjusted in sample data, we observe a fit of `r mse_nsa_insample`. We also observe that the residuals appear akin to a whitenoise pattern in their ts plot, as well as roughly normally distributed in their histogram. The ACF plot shows statistically insignificant values for up through 24 lags. 
